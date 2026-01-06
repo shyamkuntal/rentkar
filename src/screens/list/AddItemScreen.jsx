@@ -1,0 +1,1 @@
+import React from 'react'; import { View, Text, StyleSheet } from 'react-native'; const AddItemScreen = () => <View style={{flex:1,justifyContent:'center',alignItems:'center'}}><Text>AddItemScreen</Text></View>; export default AddItemScreen;

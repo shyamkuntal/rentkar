@@ -1,0 +1,1 @@
+import React from 'react'; import { View, Text, StyleSheet } from 'react-native'; const SettingsScreen = () => <View style={{flex:1,justifyContent:'center',alignItems:'center'}}><Text>SettingsScreen</Text></View>; export default SettingsScreen;
