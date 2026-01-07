@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.2)',
   },
   headerSafeArea: {
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   androidGlassFallback: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(30, 30, 35, 0.92)',
   },
   bottomBarContent: {

@@ -41,11 +41,11 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   overflowContainer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: 'hidden',
   },
   androidFallback: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(40, 40, 45, 0.85)', // Slightly lighter/translucent dark for Android
   },
   contentContainer: {
