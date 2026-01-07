@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
+import GlassView from '../../components/GlassView';
 
 const ChatListScreen = () => {
   const navigation = useNavigation();
@@ -56,30 +57,34 @@ const ChatListScreen = () => {
 
   const renderChatItem = ({ item }) => (
     <TouchableOpacity
-      style={styles.chatItem}
       onPress={() => navigation.navigate('Chat', { 
         owner: { name: item.user, avatar: item.avatar }, 
         product: { title: item.item, image: item.image, price: item.price } 
       })}
+      style={{ marginBottom: 12 }}
     >
-      <Image source={{ uri: item.avatar }} style={styles.avatar} />
-      <View style={styles.chatInfo}>
-        <View style={styles.chatHeader}>
-          <Text style={styles.userName}>{item.user}</Text>
-          <Text style={styles.time}>{item.time}</Text>
-        </View>
-        <Text style={styles.itemName}>Re: {item.item}</Text>
-        <View style={styles.messageRow}>
-          <Text style={[styles.lastMessage, item.unread > 0 && styles.unreadMessage]} numberOfLines={1}>
-            {item.lastMessage}
-          </Text>
-          {item.unread > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadText}>{item.unread}</Text>
+      <GlassView style={styles.chatItem} borderRadius={20}>
+        <View style={styles.chatContentRow}>
+          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          <View style={styles.chatInfo}>
+            <View style={styles.chatHeader}>
+              <Text style={styles.userName}>{item.user}</Text>
+              <Text style={styles.time}>{item.time}</Text>
             </View>
-          )}
+            <Text style={styles.itemName}>Re: {item.item}</Text>
+            <View style={styles.messageRow}>
+              <Text style={[styles.lastMessage, item.unread > 0 && styles.unreadMessage]} numberOfLines={1}>
+                {item.lastMessage}
+              </Text>
+              {item.unread > 0 && (
+                <View style={styles.unreadBadge}>
+                  <Text style={styles.unreadText}>{item.unread}</Text>
+                </View>
+              )}
+            </View>
+          </View>
         </View>
-      </View>
+      </GlassView>
     </TouchableOpacity>
   );
 
@@ -119,11 +124,12 @@ const styles = StyleSheet.create({
     paddingBottom: 100, // Space for bottom tab bar
   },
   chatItem: {
+    padding: 16,
+    // Borders and blur handled by GlassView
+  },
+  chatContentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   avatar: {
     width: 56,

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ScrollView }
 import { useNavigation } from '@react-navigation/native';
 import { Calendar, ChevronRight, MapPin, Clock } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
+import GlassView from '../../components/GlassView';
 
 const MyRentalsScreen = () => {
   const navigation = useNavigation();
@@ -69,7 +70,8 @@ const MyRentalsScreen = () => {
   };
 
   const renderBookingItem = ({ item }) => (
-    <TouchableOpacity style={styles.card} onPress={() => handleBookingPress(item)} activeOpacity={0.8}>
+    <TouchableOpacity onPress={() => handleBookingPress(item)} activeOpacity={0.8} style={{ marginBottom: 16 }}>
+    <GlassView style={styles.card} borderRadius={16}>
       <View style={styles.cardHeader}>
         <View style={[styles.statusBadge, item.status === 'active' ? styles.statusActive : styles.statusCompleted]}>
           <Text style={styles.statusText}>{item.status === 'active' ? 'Active' : 'Completed'}</Text>
@@ -94,6 +96,7 @@ const MyRentalsScreen = () => {
         </View>
         <ChevronRight size={20} color="#666" />
       </View>
+    </GlassView>
     </TouchableOpacity>
   );
 
@@ -119,7 +122,10 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 28, fontWeight: '700', color: '#FFF' },
   listContent: { paddingHorizontal: 20, paddingBottom: 100 },
   
-  card: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, marginBottom: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+  card: { 
+    padding: 16, 
+    // Background and border handled by GlassView
+  },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   statusActive: { backgroundColor: 'rgba(29, 161, 242, 0.2)' },

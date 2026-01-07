@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Dimensions }
 import { useNavigation } from '@react-navigation/native';
 import { Plus, Edit2, Trash2, Eye, MoreHorizontal } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
+import GlassView from '../../components/GlassView';
 
 const { width } = Dimensions.get('window');
 
@@ -41,8 +42,8 @@ const MyListingsScreen = () => {
   ];
 
   const renderListingItem = ({ item }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('MyAdDetail', { listing: item })} activeOpacity={0.9}>
-    <View style={styles.listingCard}>
+    <TouchableOpacity onPress={() => navigation.navigate('MyAdDetail', { listing: item })} activeOpacity={0.9} style={{ marginBottom: 20 }}>
+    <GlassView style={styles.listingCard}>
       <Image source={{ uri: item.image }} style={styles.listingImage} />
 
       <View style={styles.cardContent}>
@@ -80,7 +81,7 @@ const MyListingsScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </GlassView>
     </TouchableOpacity>
   );
 
@@ -124,12 +125,8 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   listingCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 20,
-    marginBottom: 20,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    // Background and border handled by GlassView
+    margin: 0, 
   },
   listingImage: {
     width: '100%',
