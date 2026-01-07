@@ -21,9 +21,9 @@ const ItemCard = ({ item, onPress }) => {
         <View style={styles.card}>
           <Image source={{ uri: item.image }} style={styles.image} />
           <View style={styles.content}>
-            <Text style={styles.title}>{item.name}</Text>
-            <Text style={styles.price}>₹{item.pricePerDay}/day</Text>
-            <Text style={styles.owner}>By {item.owner}</Text>
+            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.price}>₹{item.price}/day</Text>
+            <Text style={styles.owner}>By {item.owner.name}</Text>
           </View>
         </View>
 

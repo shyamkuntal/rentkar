@@ -27,7 +27,10 @@ const LenderProfileScreen = () => {
   ];
 
   const renderListingItem = ({ item }) => (
-    <TouchableOpacity style={styles.listingCard}>
+    <TouchableOpacity 
+      style={styles.listingCard}
+      onPress={() => navigation.navigate('ItemDetail', { product: { ...item, owner: owner } })}
+    >
       <Image source={{ uri: item.image }} style={styles.listingImage} />
       <View style={styles.listingInfo}>
         <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>

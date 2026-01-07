@@ -1,20 +1,19 @@
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
+import { View, StyleSheet, Platform, Dimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { BlurView } from '@react-native-community/blur';
 import HomeStack from './HomeStack';
 import MyRentalsScreen from '../screens/rent/MyRentalsScreen';
 import AddItemScreen from '../screens/list/AddItemScreen';
 import MyListingsScreen from '../screens/list/MyListingsScreen';
-import ProfileScreen from '../screens/profile/ProfileScreen';
+
 import { colors } from '../theme/colors';
 
 // Icons
 import HomeIcon from '../assets/icons/HomeIcon.svg';
 import AddIcon from '../assets/icons/AddIcon.svg';
 import ListingsIcon from '../assets/icons/ListingsIcon.svg';
-import ProfileIcon from '../assets/icons/ProfileIcon.svg';
-import { Heart } from 'lucide-react-native';
+import { Calendar } from 'lucide-react-native';
 
 const Tab = createBottomTabNavigator();
 
@@ -29,27 +28,34 @@ const AppTabs = () => {
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: '500',
-          marginBottom: 4, // Adjusted for closer spacing to icons, like in the image
+          marginBottom: 4,
         },
         tabBarStyle: {
           position: 'absolute',
-          bottom: 20, // Slightly adjusted to match floating position in image
-          left: 20,
-          right: 20,
-          height: 60, // Adjusted height to better match image proportions
-          borderRadius: 30, // Rounded to match image
+          bottom: 30,
+          left: Dimensions.get('window').width * 0.1,
+          width: Dimensions.get('window').width * 0.8,
+          height: 70,
+          borderRadius: 35,
           backgroundColor: 'transparent',
           borderTopWidth: 0,
           elevation: 0,
           paddingBottom: 0,
           borderWidth: 1,
           borderColor: 'rgba(255,255,255,0.1)',
+          shadowColor: '#000',
+          shadowOffset: {
+            width: 0,
+            height: 10,
+          },
+          shadowOpacity: 0.4,
+          shadowRadius: 20,
         },
         tabBarItemStyle: {
           justifyContent: 'center',
           alignItems: 'center',
-          paddingVertical: 4, // Slight padding for vertical centering
-          height: 60,
+          paddingVertical: 0,
+          height: 70,
         },
         tabBarBackground: () => (
           <View style={styles.blurWrapper}>
@@ -59,7 +65,8 @@ const AppTabs = () => {
               <BlurView
                 style={StyleSheet.absoluteFill}
                 blurType="dark"
-                blurAmount={20}
+                blurAmount={30}
+                reducedTransparencyFallbackColor="rgba(20, 20, 25, 0.9)"
               />
             )}
           </View>
@@ -76,45 +83,29 @@ const AppTabs = () => {
               width={22}
               height={22}
               fill={focused ? '#FFF' : 'transparent'}
-              stroke={focused ? 'none' : '#888'} // Handle fill vs stroke icons
+              stroke={focused ? 'none' : '#888'}
             />
           )
         }}
       />
       <Tab.Screen
-        name="Rentals"
+        name="Bookings"
         component={MyRentalsScreen}
         options={{
-          tabBarLabel: 'Favorites',
+          tabBarLabel: 'Bookings',
           tabBarIcon: ({ focused }) => (
-            <Heart
+            <Calendar
               size={22}
               color={focused ? '#FFF' : '#888'}
-              fill={focused ? '#FFF' : 'transparent'}
             />
           )
         }}
       />
-      
-      {/* Middle "Post Ad" Button */}
       <Tab.Screen
-        name="Add"
-        component={AddItemScreen}
-        options={{
-          tabBarLabel: 'Post Ad',
-          tabBarIcon: ({ focused }) => (
-            <View style={styles.plusButtonContainer}>
-              <AddIcon width={24} height={24} fill="#FFF" />
-            </View>
-          )
-        }}
-      />
-      
-      <Tab.Screen
-        name="Listings"
+        name="Ads"
         component={MyListingsScreen}
         options={{
-          tabBarLabel: 'My Ads',
+          tabBarLabel: 'Ads',
           tabBarIcon: ({ focused }) => (
             <ListingsIcon
               width={22}
@@ -125,12 +116,12 @@ const AppTabs = () => {
         }}
       />
       <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
+        name="Post"
+        component={AddItemScreen}
         options={{
-          tabBarLabel: 'Profile',
+          tabBarLabel: 'Post',
           tabBarIcon: ({ focused }) => (
-            <ProfileIcon
+            <AddIcon
               width={22}
               height={22}
               fill={focused ? '#FFF' : '#888'}
@@ -149,14 +140,16 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 30,
+    borderRadius: 35,
     overflow: 'hidden',
-    backgroundColor: 'rgba(20, 20, 25, 0.85)', // Fallback for glassmorphism
+    backgroundColor: 'rgba(10, 10, 15, 0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   androidBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#1A1A1A', // Solid dark for Android
-    borderRadius: 30,
+    backgroundColor: 'rgba(20, 20, 25, 0.95)',
+    borderRadius: 35,
   },
 });
 

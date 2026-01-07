@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, ScrollView, TextInput, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { items } from '../../data/items';
 import { categories } from '../../data/categories';
@@ -42,7 +42,7 @@ const HomeScreen = () => {
     <View style={styles.itemCardWrapper}>
       <ItemCard
         item={item}
-        onPress={() => navigation.navigate('ItemDetail', { item })}
+        onPress={() => navigation.navigate('ItemDetail', { product: item })}
       />
     </View>
   );
@@ -60,9 +60,9 @@ const HomeScreen = () => {
           placeholderTextColor={colors.text.secondary}
         />
         <ChevronDown size={24} color={colors.text.secondary} />
-        <View style={styles.avatar}>
+        <TouchableOpacity style={styles.avatar} onPress={() => navigation.navigate('Profile')}>
           <User size={20} color={colors.text.primary} />
-        </View>
+        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
