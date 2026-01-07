@@ -1,20 +1,19 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, ScrollView, TextInput, Image, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ScrollView, TextInput, Image, TouchableOpacity, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { BlurView } from '@react-native-community/blur';
 import { items } from '../../data/items';
 import { categories } from '../../data/categories';
 import ItemCard from '../../components/ItemCard';
-import { colors } from '../../theme/colors';
-import { spacing } from '../../theme/spacing';
-import { typography } from '../../theme/typography';
+import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
-import { Laptop, Car, Building2, Shirt, Camera, ChevronDown, User } from 'lucide-react-native';
+import { Laptop, Car, Building2, Shirt, Dumbbell, Search, Filter, User, MapPin } from 'lucide-react-native';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
 
   const getCategoryIcon = (name) => {
-    const iconProps = { size: 24, color: colors.text.secondary };
+    const iconProps = { size: 22, color: '#FFF', strokeWidth: 1.5 };
     switch (name) {
       case 'Electronics':
         return <Laptop {...iconProps} />;
@@ -25,17 +24,37 @@ const HomeScreen = () => {
       case 'Fashion':
         return <Shirt {...iconProps} />;
       case 'Sports Gear':
-        return <Camera {...iconProps} />;
+        return <Dumbbell {...iconProps} />;
       default:
-        return null;
+        return <Laptop {...iconProps} />;
     }
   };
 
   const renderCategory = ({ item }) => (
-    <View style={styles.categoryBadge}>
-      {getCategoryIcon(item.name)}
-      <Text style={styles.categoryText}>{item.name}</Text>
-    </View>
+    <TouchableOpacity 
+      style={styles.categoryBadge}
+      onPress={() => navigation.navigate('Category', { category: item })}
+      activeOpacity={0.8}
+    >
+      {/* Glass layers for category badge */}
+      {Platform.OS === 'ios' ? (
+        <BlurView
+          style={StyleSheet.absoluteFill}
+          blurType="dark"
+          blurAmount={10}
+        />
+      ) : (
+        <View style={styles.androidBlur} />
+      )}
+      <View style={styles.categoryGlassTint} />
+      <View style={styles.categoryShine} />
+      <View style={styles.categoryBorder} />
+      
+      <View style={styles.categoryContent}>
+        {getCategoryIcon(item.name)}
+        <Text style={styles.categoryText}>{item.name}</Text>
+      </View>
+    </TouchableOpacity>
   );
 
   const renderItem = ({ item }) => (
@@ -48,24 +67,72 @@ const HomeScreen = () => {
   );
 
   return (
-    <LinearGradient
-      colors={['#9584b3ff', '#666290ff', '#677bb2ff']}
-      style={styles.container}
-    >
+    <View style={styles.container}>
+      {/* Background Gradient */}
+      <LinearGradient
+        colors={['#2B2D42', '#1A1A2E', '#16161E']}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>RentKar</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search for rentals..."
-          placeholderTextColor={colors.text.secondary}
-        />
-        <ChevronDown size={24} color={colors.text.secondary} />
-        <TouchableOpacity style={styles.avatar} onPress={() => navigation.navigate('Profile')}>
-          <User size={20} color={colors.text.primary} />
-        </TouchableOpacity>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.brandName}>
+              <Text style={styles.brandIcon}>✦ </Text>
+              RentKar
+            </Text>
+            <TouchableOpacity style={styles.locationSelector}>
+              <MapPin size={12} color="#FF5A5F" />
+              <Text style={styles.locationText}>Mumbai, India</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.avatarButton} 
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <Image 
+              source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} 
+              style={styles.avatar} 
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Search Bar with Glass Effect */}
+        <View style={styles.searchContainer}>
+          {Platform.OS === 'ios' ? (
+            <BlurView
+              style={StyleSheet.absoluteFill}
+              blurType="dark"
+              blurAmount={15}
+            />
+          ) : (
+            <View style={styles.searchAndroidBlur} />
+          )}
+          <View style={styles.searchTint} />
+          <View style={styles.searchShine} />
+          <View style={styles.searchBorder} />
+          
+          <View style={styles.searchContent}>
+            <Search size={18} color="#888" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search for rentals..."
+              placeholderTextColor="#888"
+            />
+            <TouchableOpacity style={styles.filterButton}>
+              <Filter size={18} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Categories */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Categories</Text>
           <FlatList
@@ -78,8 +145,14 @@ const HomeScreen = () => {
           />
         </View>
 
+        {/* Recommended Items */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recommended</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recommended</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAll}>See All</Text>
+            </TouchableOpacity>
+          </View>
           <FlatList
             data={items}
             renderItem={renderItem}
@@ -90,83 +163,205 @@ const HomeScreen = () => {
           />
         </View>
       </ScrollView>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#1A1A1A',
   },
+  
+  // Header
   header: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  brandName: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  brandIcon: {
+    color: '#FF5A5F',
+  },
+  locationSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: spacing.m,
-    paddingBottom: spacing.m,
-    backgroundColor: 'transparent',
+    marginTop: 4,
   },
-  headerTitle: {
-    fontSize: typography.size.xl,
-    fontWeight: typography.weight.bold,
-    color: colors.primary,
-    marginRight: spacing.m,
+  locationText: {
+    color: '#CCC',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  avatarButton: {
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
+  
+  // Search Bar Glass
+  searchContainer: {
+    height: 50,
+    borderRadius: 25,
+    overflow: 'hidden',
+    // Shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  searchAndroidBlur: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(30, 30, 35, 0.9)',
+  },
+  searchTint: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  searchShine: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 25,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.15)',
+    borderLeftColor: 'rgba(255, 255, 255, 0.1)',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'transparent',
+  },
+  searchBorder: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  searchContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    zIndex: 10,
   },
   searchInput: {
     flex: 1,
-    backgroundColor: colors.glass.card,
-    borderRadius: spacing.borderRadius.l,
-    paddingHorizontal: spacing.m,
-    paddingVertical: spacing.s,
-    color: colors.text.primary,
-    fontSize: typography.size.s,
-    marginRight: spacing.s,
+    marginLeft: 10,
+    fontSize: 15,
+    color: '#FFF',
   },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.glass.card,
+  filterButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: spacing.s,
   },
+  
+  // Scroll Content
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  
+  // Sections
   section: {
-    marginBottom: spacing.l,
-    paddingHorizontal: spacing.m,
+    marginBottom: 24,
+    paddingHorizontal: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: typography.size.l,
-    fontWeight: typography.weight.bold,
-    marginBottom: spacing.m,
-    color: colors.text.primary,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 16,
   },
+  seeAll: {
+    fontSize: 14,
+    color: '#FF5A5F',
+    fontWeight: '500',
+    marginBottom: 16,
+  },
+  
+  // Categories
   categoryList: {
-    paddingRight: spacing.m,
+    paddingRight: 20,
   },
   categoryBadge: {
-    backgroundColor: colors.glass.card,
-    paddingVertical: spacing.m,
-    paddingHorizontal: spacing.m,
-    borderRadius: spacing.borderRadius.l,
-    marginRight: spacing.m,
+    width: 90,
+    height: 90,
+    borderRadius: 20,
+    marginRight: 12,
+    overflow: 'hidden',
+    // Shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  androidBlur: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(30, 30, 35, 0.9)',
+  },
+  categoryGlassTint: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  categoryShine: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 20,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+    borderLeftColor: 'rgba(255, 255, 255, 0.1)',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'transparent',
+  },
+  categoryBorder: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.glass.border,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  categoryContent: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
+    zIndex: 10,
+    gap: 8,
   },
   categoryText: {
-    color: colors.text.primary,
-    fontWeight: typography.weight.medium,
-    fontSize: typography.size.xs,
+    color: '#FFF',
+    fontWeight: '500',
+    fontSize: 11,
+    textAlign: 'center',
   },
+  
+  // Items Grid
   columnWrapper: {
     justifyContent: 'space-between',
-    marginBottom: spacing.m,
   },
   itemCardWrapper: {
-    flex: 0.48, // To ensure two columns with space
+    width: '48%',
   },
 });
 

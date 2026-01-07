@@ -71,8 +71,11 @@ const ProductDetailsScreen = () => {
   };
 
   const handleChat = () => {
-    // Navigate to Chat List as per new requirement
-    navigation.navigate('Chats');
+    // Navigate to individual Chat Screen
+    navigation.navigate('ChatScreen', {
+      product: product,
+      owner: product.owner
+    });
   };
 
   const handleViewProfile = () => {

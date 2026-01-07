@@ -1,23 +1,50 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { BlurView } from '@react-native-community/blur';
 import { ChevronRight, Settings, CreditCard, Bell, Shield, Heart, LogOut, User } from 'lucide-react-native';
-import { colors } from '../../theme/colors';
+import LinearGradient from 'react-native-linear-gradient';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
 
   const menuItems = [
-    { icon: <User size={22} color={colors.text.primary} />, label: 'Personal Information', route: 'EditProfile' },
-    { icon: <CreditCard size={22} color={colors.text.primary} />, label: 'Payments & Payouts', route: 'Payments' },
-    { icon: <Bell size={22} color={colors.text.primary} />, label: 'Notifications', route: 'Notifications' },
-    { icon: <Shield size={22} color={colors.text.primary} />, label: 'Privacy & Security', route: 'Privacy' },
-    { icon: <Heart size={22} color={colors.text.primary} />, label: 'My Favorites', route: 'Rentals' }, // Navigates to existing screen
-    { icon: <Settings size={22} color={colors.text.primary} />, label: 'Settings', route: 'Settings' },
+    { icon: <User size={22} color="#FFF" />, label: 'Personal Information', route: 'EditProfile' },
+    { icon: <CreditCard size={22} color="#FFF" />, label: 'Payments & Payouts', route: 'Payments' },
+    { icon: <Bell size={22} color="#FFF" />, label: 'Notifications', route: 'Notifications' },
+    { icon: <Shield size={22} color="#FFF" />, label: 'Privacy & Security', route: 'Privacy' },
+    { icon: <Heart size={22} color="#FFF" />, label: 'My Favorites', route: 'Rentals' },
+    { icon: <Settings size={22} color="#FFF" />, label: 'Settings', route: 'Settings' },
   ];
+
+  // Liquid Glass Card Component
+  const GlassCard = ({ children, style, contentStyle }) => (
+    <View style={[styles.glassCard, style]}>
+      {Platform.OS === 'ios' ? (
+        <BlurView
+          style={StyleSheet.absoluteFill}
+          blurType="dark"
+          blurAmount={15}
+        />
+      ) : (
+        <View style={styles.androidBlur} />
+      )}
+      <View style={styles.glassTint} />
+      <View style={styles.glassShineTop} />
+      <View style={styles.glassShineBottom} />
+      <View style={styles.glassBorder} />
+      <View style={[styles.glassContent, contentStyle]}>{children}</View>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
+      {/* Background Gradient */}
+      <LinearGradient
+        colors={['#2B2D42', '#1A1A2E', '#16161E']}
+        style={StyleSheet.absoluteFill}
+      />
+
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
@@ -25,7 +52,7 @@ const ProfileScreen = () => {
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* User Card */}
-        <View style={styles.userCard}>
+        <GlassCard contentStyle={styles.userCardContent}>
           <Image 
             source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200' }} 
             style={styles.avatar} 
@@ -34,13 +61,13 @@ const ProfileScreen = () => {
             <Text style={styles.userName}>Shyam Kuntal</Text>
             <Text style={styles.userEmail}>shyam.design@gmail.com</Text>
             <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedText}>Verified Member</Text>
+              <Text style={styles.verifiedText}>✓ Verified Member</Text>
             </View>
           </View>
-        </View>
+        </GlassCard>
 
         {/* Stats Row */}
-        <View style={styles.statsContainer}>
+        <GlassCard contentStyle={styles.statsContent}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>12</Text>
             <Text style={styles.statLabel}>Rentals</Text>
@@ -55,25 +82,31 @@ const ProfileScreen = () => {
             <Text style={styles.statValue}>4.9</Text>
             <Text style={styles.statLabel}>Rating</Text>
           </View>
-        </View>
+        </GlassCard>
 
         {/* Menu Options */}
-        <View style={styles.menuContainer}>
+        <GlassCard contentStyle={styles.menuContent}>
           {menuItems.map((item, index) => (
             <TouchableOpacity 
               key={index} 
-              style={styles.menuItem}
-              onPress={() => item.route === 'Rentals' ? navigation.navigate('MainTabs', { screen: 'Rentals' }) : null}
+              style={[styles.menuItem, index < menuItems.length - 1 && styles.menuItemBorder]}
+              onPress={() => {
+                if (item.route === 'Rentals') {
+                  navigation.navigate('MainTabs', { screen: 'Bookings' });
+                } else if (item.route === 'Settings') {
+                  navigation.navigate('Settings');
+                } else if (item.route === 'EditProfile') {
+                  navigation.navigate('EditProfile');
+                }
+              }}
             >
-              <View style={styles.menuIconContainer}>
-                {item.icon}
-              </View>
+              <View style={styles.menuIconContainer}>{item.icon}</View>
               <Text style={styles.menuLabel}>{item.label}</Text>
-              <ChevronRight size={20} color={colors.text.secondary} />
+              <ChevronRight size={20} color="#888" />
             </TouchableOpacity>
           ))}
-        </View>
-        
+        </GlassCard>
+
         {/* Logout Button */}
         <TouchableOpacity style={styles.logoutButton}>
           <LogOut size={22} color="#FF4545" />
@@ -95,7 +128,6 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    backgroundColor: 'transparent',
   },
   headerTitle: {
     fontSize: 28,
@@ -105,20 +137,72 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
   },
-  userCard: {
+
+  // Glass Card Base Styles
+  glassCard: {
+    borderRadius: 24,
+    overflow: 'hidden',
+    marginBottom: 20,
+    // Shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  androidBlur: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(30, 30, 35, 0.92)',
+  },
+  glassTint: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  glassShineTop: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 24,
+    borderTopWidth: 1.5,
+    borderLeftWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+    borderLeftColor: 'rgba(255, 255, 255, 0.1)',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'transparent',
+  },
+  glassShineBottom: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 24,
+    borderBottomWidth: 1,
+    borderRightWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderRightColor: 'rgba(255, 255, 255, 0.05)',
+    borderTopColor: 'transparent',
+    borderLeftColor: 'transparent',
+  },
+  glassBorder: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  glassContent: {
+    zIndex: 10,
+  },
+
+  // User Card Content
+  userCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 30,
+    padding: 20,
   },
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#FF5A5F',
   },
   userInfo: {
-    marginLeft: 20,
+    marginLeft: 16,
     flex: 1,
   },
   userName: {
@@ -133,7 +217,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   verifiedBadge: {
-    backgroundColor: 'rgba(29, 161, 242, 0.1)',
+    backgroundColor: 'rgba(29, 161, 242, 0.15)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
@@ -146,14 +230,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  statsContainer: {
+
+  // Stats Content
+  statsContent: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 20,
-    paddingVertical: 20,
-    marginBottom: 30,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    paddingVertical: 24,
   },
   statItem: {
     flex: 1,
@@ -161,7 +242,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statValue: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700',
     color: '#FF5A5F',
     marginBottom: 4,
@@ -176,24 +257,29 @@ const styles = StyleSheet.create({
     height: '60%',
     alignSelf: 'center',
   },
-  menuContainer: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 24,
-    padding: 10,
-    marginBottom: 30,
+
+  // Menu Content
+  menuContent: {
+    padding: 8,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+  },
+  menuItemBorder: {
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   menuIconContainer: {
-    width: 40,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 14,
   },
   menuLabel: {
     flex: 1,
@@ -201,21 +287,19 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '500',
   },
+
+  // Logout
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 69, 69, 0.1)',
-    padding: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 69, 69, 0.2)',
+    paddingVertical: 16,
+    gap: 10,
   },
   logoutText: {
     color: '#FF4545',
     fontSize: 16,
     fontWeight: '600',
-    marginLeft: 10,
   },
 });
 

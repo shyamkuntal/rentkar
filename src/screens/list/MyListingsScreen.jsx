@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Plus, Edit2, Trash2, Eye, MoreHorizontal } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import GlassView from '../../components/GlassView';
+import LinearGradient from 'react-native-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
@@ -56,56 +57,60 @@ const MyListingsScreen = () => {
 
   const renderListingItem = ({ item }) => (
     <TouchableOpacity onPress={() => navigation.navigate('MyAdDetail', { listing: item })} activeOpacity={0.9} style={{ marginBottom: 20 }}>
-    <GlassView style={styles.listingCard}>
-      <Image source={{ uri: item.image }} style={styles.listingImage} />
+      <GlassView style={styles.listingCard}>
+        <Image source={{ uri: item.image }} style={styles.listingImage} />
 
-      <View style={styles.cardContent}>
-        <View style={styles.headerRow}>
-          <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
-          <TouchableOpacity>
-            <MoreHorizontal size={20} color="#888" />
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.price}>₹{item.price}<Text style={styles.perDay}>/day</Text></Text>
-
-        <View style={styles.statsRow}>
-          <View style={styles.stat}>
-            <Eye size={14} color="#888" />
-            <Text style={styles.statText}>{item.views} Views</Text>
+        <View style={styles.cardContent}>
+          <View style={styles.headerRow}>
+            <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
+            <TouchableOpacity>
+              <MoreHorizontal size={20} color="#888" />
+            </TouchableOpacity>
           </View>
-          <View style={[styles.statusBadge, item.status === 'active' ? styles.statusActive : styles.statusRented]}>
-            <Text style={[styles.statusText, item.status === 'active' ? styles.textActive : styles.textRented]}>
-              {item.status === 'active' ? 'Active' : 'Rented'}
-            </Text>
+
+          <Text style={styles.price}>₹{item.price}<Text style={styles.perDay}>/day</Text></Text>
+
+          <View style={styles.statsRow}>
+            <View style={styles.stat}>
+              <Eye size={14} color="#888" />
+              <Text style={styles.statText}>{item.views} Views</Text>
+            </View>
+            <View style={[styles.statusBadge, item.status === 'active' ? styles.statusActive : styles.statusRented]}>
+              <Text style={[styles.statusText, item.status === 'active' ? styles.textActive : styles.textRented]}>
+                {item.status === 'active' ? 'Active' : 'Rented'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => navigation.navigate('EditListing', { listing: item })}
+            >
+              <Edit2 size={16} color="#FFF" />
+              <Text style={styles.actionText}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => handleDeletePress(item.id)}
+            >
+              <Trash2 size={16} color="#FF4545" />
+              <Text style={[styles.actionText, { color: '#FF4545' }]}>Delete</Text>
+            </TouchableOpacity>
           </View>
         </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.actionRow}>
-          <TouchableOpacity 
-            style={styles.actionBtn} 
-            onPress={() => navigation.navigate('EditListing', { listing: item })}
-          >
-            <Edit2 size={16} color="#FFF" />
-            <Text style={styles.actionText}>Edit</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.actionBtn}
-            onPress={() => handleDeletePress(item.id)}
-          >
-            <Trash2 size={16} color="#FF4545" />
-            <Text style={[styles.actionText, { color: '#FF4545' }]}>Delete</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </GlassView>
+      </GlassView>
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
+      <LinearGradient
+        colors={['#2B2D42', '#1A1A2E', '#16161E']}
+        style={StyleSheet.absoluteFill}
+      />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Ads</Text>
       </View>
@@ -125,22 +130,24 @@ const MyListingsScreen = () => {
         onRequestClose={() => setDeleteModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-            <GlassView style={styles.modalContent} intensity={40} borderRadius={24}>
-                <View style={styles.modalIconContainer}>
-                    <Trash2 size={32} color="#FF4545" />
-                </View>
-                <Text style={styles.modalTitle}>Delete Ad?</Text>
-                <Text style={styles.modalDescription}>Are you sure you want to delete this advertisement? This action cannot be undone.</Text>
-                
-                <View style={styles.modalActions}>
-                    <TouchableOpacity style={styles.cancelBtn} onPress={() => setDeleteModalVisible(false)}>
-                        <Text style={styles.cancelText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.deleteBtn} onPress={confirmDelete}>
-                        <Text style={styles.deleteText}>Delete</Text>
-                    </TouchableOpacity>
-                </View>
-            </GlassView>
+          <GlassView style={styles.modalContent} intensity={40} borderRadius={24}>
+            <View style={styles.centeredModalWrapper}>
+              <View style={styles.modalIconContainer}>
+                <Trash2 size={32} color="#FF4545" />
+              </View>
+              <Text style={styles.modalTitle}>Delete Ad?</Text>
+              <Text style={styles.modalDescription}>Are you sure you want to delete this advertisement? This action cannot be undone.</Text>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setDeleteModalVisible(false)}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.deleteBtn} onPress={confirmDelete}>
+                  <Text style={styles.deleteText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </GlassView>
         </View>
       </Modal>
     </View>
@@ -171,7 +178,7 @@ const styles = StyleSheet.create({
   },
   listingCard: {
     // Background and border handled by GlassView
-    margin: 0, 
+    margin: 0,
   },
   listingImage: {
     width: '100%',
@@ -276,7 +283,10 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     padding: 24,
+  },
+  centeredModalWrapper: {
     alignItems: 'center',
+    width: '100%',
   },
   modalIconContainer: {
     width: 64,
@@ -288,12 +298,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 69, 69, 0.3)',
+    alignSelf: 'center',
   },
   modalTitle: {
     fontSize: 22,
     fontWeight: '700',
     color: '#FFF',
     marginBottom: 12,
+    textAlign: 'center',
   },
   modalDescription: {
     fontSize: 15,

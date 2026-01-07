@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import GlassView from '../../components/GlassView';
+import LinearGradient from 'react-native-linear-gradient';
 
 const ChatListScreen = () => {
   const navigation = useNavigation();
@@ -59,6 +60,10 @@ const ChatListScreen = () => {
     <TouchableOpacity
       activeOpacity={0.7}
       style={{ marginBottom: 12 }}
+      onPress={() => navigation.navigate('ChatScreen', {
+        owner: { name: item.user, avatar: item.avatar },
+        product: { title: item.item, image: item.image, price: item.price }
+      })}
     >
       <GlassView style={styles.chatItem} borderRadius={20}>
         <View style={styles.chatContentRow}>
@@ -87,6 +92,12 @@ const ChatListScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* Background Gradient */}
+      <LinearGradient
+        colors={['#2B2D42', '#1A1A2E', '#16161E']}
+        style={StyleSheet.absoluteFill}
+      />
+      
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
       </View>

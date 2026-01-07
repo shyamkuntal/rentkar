@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Calendar, ChevronRight, MapPin, Clock } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import GlassView from '../../components/GlassView';
+import LinearGradient from 'react-native-linear-gradient';
 
 const MyRentalsScreen = () => {
   const navigation = useNavigation();
@@ -24,11 +25,11 @@ const MyRentalsScreen = () => {
         reviews: 128,
         description: 'Rent this amazing DJI Mavic Air 2 drone for your next shoot!',
         owner: {
-           name: 'Vikram Singh',
-           avatar: 'https://randomuser.me/api/portraits/men/45.jpg',
-           rating: 4.8,
-           responseRate: '98%',
-           joined: 'Dec 2023'
+          name: 'Vikram Singh',
+          avatar: 'https://randomuser.me/api/portraits/men/45.jpg',
+          rating: 4.8,
+          responseRate: '98%',
+          joined: 'Dec 2023'
         }
       },
       dates: 'Oct 12 - Oct 15',
@@ -49,11 +50,11 @@ const MyRentalsScreen = () => {
         reviews: 210,
         description: 'Cruise the city in style with this well-maintained Royal Enfield Classic 350.',
         owner: {
-           name: 'Vikas Singh',
-           avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=200',
-           responseRate: '92%',
-           rating: 4.5,
-           joined: 'Nov 2022'
+          name: 'Vikas Singh',
+          avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=200',
+          responseRate: '92%',
+          rating: 4.5,
+          joined: 'Nov 2022'
         }
       },
       dates: 'Sep 20 - Sep 22',
@@ -71,37 +72,41 @@ const MyRentalsScreen = () => {
 
   const renderBookingItem = ({ item }) => (
     <TouchableOpacity onPress={() => handleBookingPress(item)} activeOpacity={0.8} style={{ marginBottom: 16 }}>
-    <GlassView style={styles.card} borderRadius={16}>
-      <View style={styles.cardHeader}>
-        <View style={[styles.statusBadge, item.status === 'active' ? styles.statusActive : styles.statusCompleted]}>
-          <Text style={styles.statusText}>{item.status === 'active' ? 'Active' : 'Completed'}</Text>
-        </View>
-        <Text style={styles.price}>₹{item.totalPrice}</Text>
-      </View>
-
-      <View style={styles.cardContent}>
-        <Image source={{ uri: item.product.image }} style={styles.prodImage} />
-        <View style={styles.info}>
-          <Text style={styles.title} numberOfLines={2}>{item.product.title}</Text>
-          <View style={styles.dateRow}>
-            <Calendar size={14} color="#888" />
-            <Text style={styles.dateText}>{item.dates}</Text>
+      <GlassView style={styles.card} borderRadius={16}>
+        <View style={styles.cardHeader}>
+          <View style={[styles.statusBadge, item.status === 'active' ? styles.statusActive : styles.statusCompleted]}>
+            <Text style={styles.statusText}>{item.status === 'active' ? 'Active' : 'Completed'}</Text>
           </View>
-          {item.status === 'active' && (
-              <View style={styles.timeLeftBadge}>
-                  <Clock size={12} color="#FFA500" />
-                  <Text style={styles.timeLeftText}>{item.timeLeft}</Text>
-              </View>
-          )}
+          <Text style={styles.price}>₹{item.totalPrice}</Text>
         </View>
-        <ChevronRight size={20} color="#666" />
-      </View>
-    </GlassView>
+
+        <View style={styles.cardContent}>
+          <Image source={{ uri: item.product.image }} style={styles.prodImage} />
+          <View style={styles.info}>
+            <Text style={styles.title} numberOfLines={2}>{item.product.title}</Text>
+            <View style={styles.dateRow}>
+              <Calendar size={14} color="#888" />
+              <Text style={styles.dateText}>{item.dates}</Text>
+            </View>
+            {item.status === 'active' && (
+              <View style={styles.timeLeftBadge}>
+                <Clock size={12} color="#FFA500" />
+                <Text style={styles.timeLeftText}>{item.timeLeft}</Text>
+              </View>
+            )}
+          </View>
+          <ChevronRight size={20} color="#666" />
+        </View>
+      </GlassView>
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
+      <LinearGradient
+        colors={['#2B2D42', '#1A1A2E', '#16161E']}
+        style={StyleSheet.absoluteFill}
+      />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Bookings</Text>
       </View>
@@ -121,9 +126,9 @@ const styles = StyleSheet.create({
   header: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 20 },
   headerTitle: { fontSize: 28, fontWeight: '700', color: '#FFF' },
   listContent: { paddingHorizontal: 20, paddingBottom: 100 },
-  
-  card: { 
-    padding: 16, 
+
+  card: {
+    padding: 16,
     // Background and border handled by GlassView
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
@@ -132,7 +137,7 @@ const styles = StyleSheet.create({
   statusCompleted: { backgroundColor: 'rgba(92, 209, 137, 0.2)' },
   statusText: { fontSize: 12, fontWeight: '600', color: '#FFF', textTransform: 'capitalize' },
   price: { fontSize: 16, fontWeight: '700', color: '#FF5A5F' },
-  
+
   cardContent: { flexDirection: 'row', alignItems: 'center' },
   prodImage: { width: 60, height: 60, borderRadius: 10, backgroundColor: '#333' },
   info: { flex: 1, marginLeft: 12 },
