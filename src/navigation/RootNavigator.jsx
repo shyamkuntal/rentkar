@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { View, ActivityIndicator } from 'react-native';
 import AuthStack from './AuthStack';
-import AppTabs from './AppTabs';
+import AppStack from './AppStack';
 import { AuthContext } from '../context/AuthContext';
 
 const RootNavigator = () => {
@@ -18,7 +18,7 @@ const RootNavigator = () => {
 
   return (
     <NavigationContainer>
-      {userToken !== null ? <AppTabs /> : <AuthStack />}
+      {userToken !== null ? <AppStack /> : <AuthStack />}
     </NavigationContainer>
   );
 };
