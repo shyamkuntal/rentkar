@@ -134,6 +134,7 @@ const AppTabs = () => {
         component={AddItemScreen}
         options={{
           tabBarLabel: 'Post',
+          tabBarStyle: { display: 'none' }, // Hierarchically hide tab bar for this screen
           tabBarIcon: ({ focused }) => (
             <AddIcon
               width={22}

@@ -41,6 +41,7 @@ const MyListingsScreen = () => {
   ];
 
   const renderListingItem = ({ item }) => (
+    <TouchableOpacity onPress={() => navigation.navigate('MyAdDetail', { listing: item })} activeOpacity={0.9}>
     <View style={styles.listingCard}>
       <Image source={{ uri: item.image }} style={styles.listingImage} />
 
@@ -80,15 +81,13 @@ const MyListingsScreen = () => {
         </View>
       </View>
     </View>
+    </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Ads</Text>
-        <TouchableOpacity style={styles.addButton}>
-          <Plus size={24} color="#FFF" />
-        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -119,19 +118,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '700',
     color: '#FFF',
-  },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary || '#FF5A5F',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: colors.primary || '#FF5A5F',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
   },
   listContent: {
     paddingHorizontal: 20,
