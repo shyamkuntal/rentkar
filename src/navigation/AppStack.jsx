@@ -5,6 +5,7 @@ import ItemDetailScreen from '../screens/home/ItemDetailScreen';
 import LenderProfileScreen from '../screens/profile/LenderProfileScreen';
 import ChatScreen from '../screens/chat/ChatScreen';
 import RentBookingScreen from '../screens/rent/RentBookingScreen';
+import BookingDetailScreen from '../screens/rent/BookingDetailScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen'; // Added as per request
 
 const Stack = createNativeStackNavigator();
@@ -17,6 +18,7 @@ const AppStack = () => {
       <Stack.Screen name="LenderProfile" component={LenderProfileScreen} />
       <Stack.Screen name="Chat" component={ChatScreen} />
       <Stack.Screen name="RentBooking" component={RentBookingScreen} />
+      <Stack.Screen name="BookingDetail" component={BookingDetailScreen} />
       <Stack.Screen name="Profile" component={ProfileScreen} />
     </Stack.Navigator>
   );

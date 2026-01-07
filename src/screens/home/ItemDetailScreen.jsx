@@ -13,24 +13,24 @@ import {
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { 
-  ChevronLeft, 
-  MapPin, 
-  MessageCircle, 
-  Heart, 
-  Share2, 
-  Star 
+import {
+  ChevronLeft,
+  MapPin,
+  MessageCircle,
+  Heart,
+  Share2,
+  Star
 } from 'lucide-react-native';
 
 const colors = {
-    primary: '#FF5A5F', 
-    text: {
-        primary: '#FFFFFF',
-        secondary: '#CCCCCC',
-    },
-    background: '#1A1A1A',
-    card: 'rgba(255,255,255,0.05)',
-    border: 'rgba(255,255,255,0.1)',
+  primary: '#FF5A5F',
+  text: {
+    primary: '#FFFFFF',
+    secondary: '#CCCCCC',
+  },
+  background: '#1A1A1A',
+  card: 'rgba(255,255,255,0.05)',
+  border: 'rgba(255,255,255,0.1)',
 };
 
 const { height } = Dimensions.get('window');
@@ -39,11 +39,13 @@ const ProductDetailsScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const hideProfileLink = route.params?.hideProfileLink;
+  const hideRentOption = route.params?.hideRentOption;
+  const hideChatOption = route.params?.hideChatOption;
 
   const product = route.params?.product || {
     id: '1',
     title: 'DJI Mavic Air 2 Drone Combo',
-    image: 'https://images.unsplash.com/photo-1579829366248-204da8419767?q=80&w=1000&auto=format&fit=crop', 
+    image: 'https://images.unsplash.com/photo-1579829366248-204da8419767?q=80&w=1000&auto=format&fit=crop',
     price: 800,
     rateUnit: '/day',
     location: 'Bandra, Mumbai',
@@ -69,8 +71,8 @@ const ProductDetailsScreen = () => {
   };
 
   const handleChat = () => {
-    // Pass owner details to chat
-    navigation.navigate('Chat', { owner: product.owner });
+    // Pass owner and product details to chat
+    navigation.navigate('Chat', { owner: product.owner, product: product });
   };
 
   const handleViewProfile = () => {
@@ -81,7 +83,7 @@ const ProductDetailsScreen = () => {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      
+
       <ScrollView
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
@@ -92,7 +94,7 @@ const ProductDetailsScreen = () => {
         <View style={styles.imageContainer}>
           <Image source={{ uri: product.image }} style={styles.image} resizeMode="cover" />
           <View style={styles.imageOverlay} />
-          
+
           <SafeAreaView style={styles.headerSafeArea}>
             <View style={styles.headerButtons}>
               <TouchableOpacity
@@ -142,7 +144,7 @@ const ProductDetailsScreen = () => {
               <Text style={styles.ownerName}>{product.owner.name}</Text>
               <Text style={styles.ownerResponse}>Response Rate: {product.owner.responseRate}</Text>
             </View>
-            
+
             {/* Added onPress here, hidden if navigated from profile */}
             {!hideProfileLink && (
               <TouchableOpacity style={styles.viewProfileBtn} onPress={handleViewProfile}>
@@ -155,39 +157,46 @@ const ProductDetailsScreen = () => {
             <Text style={styles.sectionTitle}>Description</Text>
             <Text style={styles.descriptionText}>{product.description}</Text>
           </View>
-          
-          <View style={{ height: 110 }} /> 
+
+          <View style={{ height: 110 }} />
         </View>
       </ScrollView>
 
       {/* Floating Glass Action Bar */}
-      <View style={styles.bottomBarContainer}>
-        <View style={styles.glassBackground}>
-          {Platform.OS === 'android' ? (
-            <View style={styles.androidGlassFallback} />
-          ) : (
-            <BlurView
-              style={StyleSheet.absoluteFill}
-              blurType="dark"
-              blurAmount={25}
-              reducedTransparencyFallbackColor="rgba(30,30,35,0.95)"
-            />
-          )}
+      {/* Floating Glass Action Bar - Only show if at least one option is available */}
+      {(!hideRentOption || !hideChatOption) && (
+        <View style={styles.bottomBarContainer}>
+          <View style={styles.glassBackground}>
+            {Platform.OS === 'android' ? (
+              <View style={styles.androidGlassFallback} />
+            ) : (
+              <BlurView
+                style={StyleSheet.absoluteFill}
+                blurType="dark"
+                blurAmount={25}
+                reducedTransparencyFallbackColor="rgba(30,30,35,0.95)"
+              />
+            )}
+          </View>
+
+          <View style={styles.bottomBarContent}>
+            {/* Added onPress here */}
+            {!hideChatOption && (
+              <TouchableOpacity style={styles.chatButton} onPress={handleChat}>
+                <MessageCircle size={24} color={colors.primary} />
+                <Text style={styles.chatButtonText}>Chat</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Added onPress here */}
+            {!hideRentOption && (
+              <TouchableOpacity style={styles.rentButton} onPress={handleRentNow}>
+                <Text style={styles.rentButtonText}>Rent Now</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-        
-        <View style={styles.bottomBarContent}>
-          {/* Added onPress here */}
-          <TouchableOpacity style={styles.chatButton} onPress={handleChat}>
-            <MessageCircle size={24} color={colors.primary} />
-            <Text style={styles.chatButtonText}>Chat</Text>
-          </TouchableOpacity>
-          
-          {/* Added onPress here */}
-          <TouchableOpacity style={styles.rentButton} onPress={handleRentNow}>
-            <Text style={styles.rentButtonText}>Rent Now</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      )}
     </View>
   );
 };
@@ -373,6 +382,7 @@ const styles = StyleSheet.create({
     right: 20,
     height: 80,
     borderRadius: 40,
+    overflow: 'hidden', // Ensure blur doesn't leak
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
@@ -380,9 +390,10 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   glassBackground: {
-    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
     borderRadius: 40,
-    overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -394,13 +405,14 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around', // Changed to space-around for better centering when single item
     paddingHorizontal: 24,
   },
   chatButton: {
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 16,
+    flex: 1, // Allow it to flex
   },
   chatButtonText: {
     color: colors.primary,

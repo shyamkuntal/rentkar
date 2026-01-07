@@ -6,14 +6,15 @@ import HomeStack from './HomeStack';
 import MyRentalsScreen from '../screens/rent/MyRentalsScreen';
 import AddItemScreen from '../screens/list/AddItemScreen';
 import MyListingsScreen from '../screens/list/MyListingsScreen';
-
+import ChatScreen from '../screens/chat/ChatScreen';
+import ChatListScreen from '../screens/chat/ChatListScreen';
 import { colors } from '../theme/colors';
 
 // Icons
 import HomeIcon from '../assets/icons/HomeIcon.svg';
 import AddIcon from '../assets/icons/AddIcon.svg';
 import ListingsIcon from '../assets/icons/ListingsIcon.svg';
-import { Calendar } from 'lucide-react-native';
+import { Calendar, MessageCircle } from 'lucide-react-native';
 
 const Tab = createBottomTabNavigator();
 
@@ -111,6 +112,19 @@ const AppTabs = () => {
               width={22}
               height={22}
               fill={focused ? '#FFF' : '#888'}
+            />
+          )
+        }}
+      />
+      <Tab.Screen
+        name="Chats"
+        component={ChatListScreen} // Updated to ChatListScreen
+        options={{
+          tabBarLabel: 'Chat',
+          tabBarIcon: ({ focused }) => (
+            <MessageCircle
+              size={22}
+              color={focused ? '#FFF' : '#888'}
             />
           )
         }}
