@@ -1,8 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, SafeAreaView, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, SafeAreaView, Alert, Modal } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft, Edit2, Trash2, Eye, MapPin, Tag, Calendar, MoreHorizontal } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
+import GlassView from '../../components/GlassView';
 
 const { width } = Dimensions.get('window');
 
@@ -10,16 +11,16 @@ const MyAdDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { listing } = route.params;
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
-  const handleDelete = () => {
-    Alert.alert(
-      "Delete Listing",
-      "Are you sure you want to delete this listing? This action cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => navigation.goBack() }
-      ]
-    );
+  const handleDeletePress = () => {
+      setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = () => {
+      console.log('Deleting listing:', listing.id);
+      setDeleteModalVisible(false);
+      navigation.goBack();
   };
 
   return (
@@ -81,10 +82,37 @@ const MyAdDetailScreen = () => {
               <Edit2 size={20} color="#FFF" />
               <Text style={styles.btnText}>Edit Listing</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+          <TouchableOpacity style={styles.deleteButton} onPress={handleDeletePress}>
               <Trash2 size={20} color="#FF4545" />
           </TouchableOpacity>
       </View>
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={deleteModalVisible}
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+            <GlassView style={styles.modalContent} intensity={40} borderRadius={24}>
+                <View style={styles.modalIconContainer}>
+                    <Trash2 size={32} color="#FF4545" />
+                </View>
+                <Text style={styles.modalTitle}>Delete Listing?</Text>
+                <Text style={styles.modalDescription}>Are you sure you want to delete this listing? This action cannot be undone.</Text>
+                
+                <View style={styles.modalActions}>
+                    <TouchableOpacity style={styles.cancelBtn} onPress={() => setDeleteModalVisible(false)}>
+                        <Text style={styles.cancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.deleteBtn} onPress={confirmDelete}>
+                        <Text style={styles.deleteText}>Delete</Text>
+                    </TouchableOpacity>
+                </View>
+            </GlassView>
+        </View>
+      </Modal>
+
     </View>
   );
 };
@@ -245,6 +273,82 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 10,
   },
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+      },
+      modalContent: {
+        width: '100%',
+        maxWidth: 340,
+        padding: 24,
+        alignItems: 'center',
+      },
+      modalIconContainer: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: 'rgba(255, 69, 69, 0.15)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 69, 69, 0.3)',
+      },
+      modalTitle: {
+        fontSize: 22,
+        fontWeight: '700',
+        color: '#FFF',
+        marginBottom: 12,
+      },
+      modalDescription: {
+        fontSize: 15,
+        color: '#CCC',
+        textAlign: 'center',
+        marginBottom: 24,
+        lineHeight: 22,
+      },
+      modalActions: {
+        flexDirection: 'row',
+        width: '100%',
+        justifyContent: 'space-between',
+      },
+      cancelBtn: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 14,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        marginRight: 10,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+      },
+      deleteBtn: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 14,
+        backgroundColor: '#FF4545',
+        marginLeft: 10,
+        alignItems: 'center',
+        shadowColor: '#FF4545',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
+      },
+      cancelText: {
+        color: '#FFF',
+        fontWeight: '600',
+        fontSize: 16,
+      },
+      deleteText: {
+        color: '#FFF',
+        fontWeight: '600',
+        fontSize: 16,
+      },
 });
 
 export default MyAdDetailScreen;

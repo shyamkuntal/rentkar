@@ -57,10 +57,7 @@ const ChatListScreen = () => {
 
   const renderChatItem = ({ item }) => (
     <TouchableOpacity
-      onPress={() => navigation.navigate('Chat', { 
-        owner: { name: item.user, avatar: item.avatar }, 
-        product: { title: item.item, image: item.image, price: item.price } 
-      })}
+      activeOpacity={0.7}
       style={{ marginBottom: 12 }}
     >
       <GlassView style={styles.chatItem} borderRadius={20}>

@@ -9,7 +9,7 @@ const ItemCard = ({ item, onPress }) => {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
       <View style={styles.cardWrapper}>
-        
+
         {/* Glass Blur Layer */}
         <BlurView
           style={StyleSheet.absoluteFill}
@@ -34,6 +34,7 @@ const ItemCard = ({ item, onPress }) => {
 
 const styles = StyleSheet.create({
   cardWrapper: {
+    height: 260, // Fixed height to prevent size variance
     borderRadius: spacing.borderRadius.l,
     overflow: 'hidden',
     marginBottom: spacing.m,

@@ -6,7 +6,7 @@ import HomeStack from './HomeStack';
 import MyRentalsScreen from '../screens/rent/MyRentalsScreen';
 import AddItemScreen from '../screens/list/AddItemScreen';
 import MyListingsScreen from '../screens/list/MyListingsScreen';
-import ChatScreen from '../screens/chat/ChatScreen';
+
 import ChatListScreen from '../screens/chat/ChatListScreen';
 import { colors } from '../theme/colors';
 

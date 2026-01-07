@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Dimensions, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Plus, Edit2, Trash2, Eye, MoreHorizontal } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
@@ -9,6 +9,8 @@ const { width } = Dimensions.get('window');
 
 const MyListingsScreen = () => {
   const navigation = useNavigation();
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [selectedAdId, setSelectedAdId] = useState(null);
 
   // Mock Listings Data
   const listings = [
@@ -41,6 +43,17 @@ const MyListingsScreen = () => {
     }
   ];
 
+  const handleDeletePress = (id) => {
+    setSelectedAdId(id);
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDelete = () => {
+    console.log('Deleting ad:', selectedAdId);
+    setDeleteModalVisible(false);
+    setSelectedAdId(null);
+  };
+
   const renderListingItem = ({ item }) => (
     <TouchableOpacity onPress={() => navigation.navigate('MyAdDetail', { listing: item })} activeOpacity={0.9} style={{ marginBottom: 20 }}>
     <GlassView style={styles.listingCard}>
@@ -71,11 +84,17 @@ const MyListingsScreen = () => {
         <View style={styles.divider} />
 
         <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.actionBtn}>
+          <TouchableOpacity 
+            style={styles.actionBtn} 
+            onPress={() => navigation.navigate('EditListing', { listing: item })}
+          >
             <Edit2 size={16} color="#FFF" />
             <Text style={styles.actionText}>Edit</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn}>
+          <TouchableOpacity 
+            style={styles.actionBtn}
+            onPress={() => handleDeletePress(item.id)}
+          >
             <Trash2 size={16} color="#FF4545" />
             <Text style={[styles.actionText, { color: '#FF4545' }]}>Delete</Text>
           </TouchableOpacity>
@@ -98,6 +117,32 @@ const MyListingsScreen = () => {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={deleteModalVisible}
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+            <GlassView style={styles.modalContent} intensity={40} borderRadius={24}>
+                <View style={styles.modalIconContainer}>
+                    <Trash2 size={32} color="#FF4545" />
+                </View>
+                <Text style={styles.modalTitle}>Delete Ad?</Text>
+                <Text style={styles.modalDescription}>Are you sure you want to delete this advertisement? This action cannot be undone.</Text>
+                
+                <View style={styles.modalActions}>
+                    <TouchableOpacity style={styles.cancelBtn} onPress={() => setDeleteModalVisible(false)}>
+                        <Text style={styles.cancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.deleteBtn} onPress={confirmDelete}>
+                        <Text style={styles.deleteText}>Delete</Text>
+                    </TouchableOpacity>
+                </View>
+            </GlassView>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -132,6 +177,8 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 180,
     backgroundColor: '#333',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   cardContent: {
     padding: 16,
@@ -216,6 +263,82 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginLeft: 6,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 340,
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255, 69, 69, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 69, 69, 0.3)',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 12,
+  },
+  modalDescription: {
+    fontSize: 15,
+    color: '#CCC',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginRight: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  deleteBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: '#FF4545',
+    marginLeft: 10,
+    alignItems: 'center',
+    shadowColor: '#FF4545',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  cancelText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  deleteText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });
 

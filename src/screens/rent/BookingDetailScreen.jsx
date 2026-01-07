@@ -86,7 +86,7 @@ const BookingDetailScreen = () => {
                          </View>
                          <TouchableOpacity 
                              style={styles.msgBtn}
-                             onPress={() => navigation.navigate('Chat', { owner: booking.product.owner })}
+                             onPress={() => navigation.navigate('Chats')}
                          >
                               <Text style={styles.msgBtnText}>Message</Text>
                          </TouchableOpacity>

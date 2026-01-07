@@ -71,8 +71,8 @@ const ProductDetailsScreen = () => {
   };
 
   const handleChat = () => {
-    // Pass owner and product details to chat
-    navigation.navigate('Chat', { owner: product.owner, product: product });
+    // Navigate to Chat List as per new requirement
+    navigation.navigate('Chats');
   };
 
   const handleViewProfile = () => {
