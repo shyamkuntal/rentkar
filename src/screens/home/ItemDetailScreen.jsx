@@ -38,6 +38,7 @@ const { height } = Dimensions.get('window');
 const ProductDetailsScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
+  const hideProfileLink = route.params?.hideProfileLink;
 
   const product = route.params?.product || {
     id: '1',
@@ -142,10 +143,12 @@ const ProductDetailsScreen = () => {
               <Text style={styles.ownerResponse}>Response Rate: {product.owner.responseRate}</Text>
             </View>
             
-            {/* Added onPress here */}
-            <TouchableOpacity style={styles.viewProfileBtn} onPress={handleViewProfile}>
-              <Text style={styles.viewProfileText}>View Profile</Text>
-            </TouchableOpacity>
+            {/* Added onPress here, hidden if navigated from profile */}
+            {!hideProfileLink && (
+              <TouchableOpacity style={styles.viewProfileBtn} onPress={handleViewProfile}>
+                <Text style={styles.viewProfileText}>View Profile</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.section}>
