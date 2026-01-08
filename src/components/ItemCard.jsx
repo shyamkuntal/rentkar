@@ -44,7 +44,10 @@ const ItemCard = ({ item, onPress }) => {
         <View style={styles.card}>
           {/* Image */}
           <View style={styles.imageContainer}>
-            <Image source={{ uri: item.image }} style={styles.image} />
+            <Image 
+              source={{ uri: item.images && item.images.length > 0 ? item.images[0] : (item.image || 'https://via.placeholder.com/400') }} 
+              style={styles.image} 
+            />
           </View>
           
           {/* Details */}

@@ -33,9 +33,13 @@ export const API_ENDPOINTS = {
   // Bookings
   BOOKINGS: `${API_BASE_URL}/bookings`,
   BOOKING_BY_ID: (id) => `${API_BASE_URL}/bookings/${id}`,
+  OWNER_BOOKINGS: `${API_BASE_URL}/bookings/owner`,
+  PENDING_REQUESTS_COUNT: `${API_BASE_URL}/bookings/pending-count`,
 
   // Chats
   CHATS: `${API_BASE_URL}/chats`,
+  CHAT_BY_ID: (id) => `${API_BASE_URL}/chats/${id}`,
+  UNREAD_COUNT: `${API_BASE_URL}/chats/unread-count`,
   CHAT_MESSAGES: (id) => `${API_BASE_URL}/chats/${id}/messages`,
   SEND_MESSAGE: `${API_BASE_URL}/chats/messages`,
 
@@ -46,7 +50,11 @@ export const API_ENDPOINTS = {
 
   // Users
   USER_BY_ID: (id) => `${API_BASE_URL}/users/${id}`,
+  BLOCK_USER: (id) => `${API_BASE_URL}/users/${id}/block`,
   UPDATE_PROFILE: `${API_BASE_URL}/users/profile`,
+
+  // Reports
+  REPORTS: `${API_BASE_URL}/reports`,
 };
 
 export default API_BASE_URL;

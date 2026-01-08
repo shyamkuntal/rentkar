@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, ActivityIndicator, Alert, Modal } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ChevronLeft, Send, Paperclip, MoreVertical } from 'lucide-react-native';
+import { ChevronLeft, Send, Paperclip, MoreVertical, Trash2, Ban, Flag, X } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { BlurView } from '@react-native-community/blur';
-import { getMessages } from '../../services/chatService';
+import { getMessages, deleteChat } from '../../services/chatService';
+import { blockUser, reportEntity } from '../../services/blockService';
 import socketService from '../../services/socketService';
 import { AuthContext } from '../../context/AuthContext';
 
@@ -17,13 +18,14 @@ const ChatScreen = () => {
     const [messages, setMessages] = useState([]);
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(true);
+    const [menuVisible, setMenuVisible] = useState(false);
     const flatListRef = useRef(null);
 
     useEffect(() => {
         if (!chatId) return;
 
         loadMessages();
-        setupSocket();
+        initializeSocket();
 
         return () => {
             socketService.leaveChat(chatId);
@@ -42,9 +44,18 @@ const ChatScreen = () => {
         }
     };
 
-    const setupSocket = () => {
-        socketService.joinChat(chatId);
-        socketService.onMessage(handleNewMessage);
+    const initializeSocket = async () => {
+        try {
+            // Ensure WebSocket is connected before joining chat
+            if (!socketService.isConnected()) {
+                await socketService.connect();
+            }
+            // Join chat room and listen for messages
+            socketService.joinChat(chatId);
+            socketService.onMessage(handleNewMessage);
+        } catch (error) {
+            console.error('Error initializing socket:', error);
+        }
     };
 
     const handleNewMessage = (newMessage) => {
@@ -119,10 +130,36 @@ const ChatScreen = () => {
                         </View>
                     </View>
 
-                    <TouchableOpacity style={styles.moreButton}>
+                    <TouchableOpacity style={styles.moreButton} onPress={() => setMenuVisible(true)}>
                         <MoreVertical size={20} color="#FFF" />
                     </TouchableOpacity>
                 </View>
+
+                {/* Dropdown Menu */}
+                {menuVisible && (
+                    <TouchableWithoutFeedback onPress={() => setMenuVisible(false)}>
+                        <View style={styles.menuOverlay}>
+                             <View style={styles.menuContainer}>
+                                <TouchableOpacity style={styles.menuItem} onPress={handleDeleteChat}>
+                                    <Trash2 size={18} color="#FF5A5F" />
+                                    <Text style={styles.menuText}>Delete Chat</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.menuItem} onPress={handleBlockUser}>
+                                    <Ban size={18} color="#FF5A5F" />
+                                    <Text style={styles.menuText}>Block User</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.menuItem} onPress={handleReportUser}>
+                                    <Flag size={18} color="#FFF" />
+                                    <Text style={[styles.menuText, {color:'#FFF'}]}>Report Spam</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.menuItem, {borderBottomWidth:0}]} onPress={() => setMenuVisible(false)}>
+                                    <X size={18} color="#888" />
+                                    <Text style={[styles.menuText, {color:'#888'}]}>Close</Text>
+                                </TouchableOpacity>
+                             </View>
+                        </View>
+                    </TouchableWithoutFeedback>
+                )}
             </View>
 
             {/* Product Context Header */}
@@ -352,6 +389,45 @@ const styles = StyleSheet.create({
     },
     sendButtonActive: {
         backgroundColor: '#FF5A5F',
+    },
+    
+    menuOverlay: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        zIndex: 200,
+    },
+    menuContainer: {
+        position: 'absolute',
+        top: Platform.OS === 'ios' ? 100 : 80,
+        right: 20,
+        backgroundColor: '#25252A',
+        borderRadius: 16,
+        padding: 8,
+        width: 180,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 10,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.05)',
+    },
+    menuText: {
+        color: '#FF5A5F',
+        marginLeft: 12,
+        fontWeight: '500',
+        fontSize: 14,
     },
 });
 

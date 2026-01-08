@@ -1,24 +1,27 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft, Calendar as CalendarIcon, Info } from 'lucide-react-native';
+import { createBooking } from '../../services/bookingService';
 
 const RentBookingScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   
-  // Product data passed from previous screen
   const product = route.params?.product || { 
-      title: 'DJI Mavic Air 2 Drone', 
-      price: 800, 
-      image: 'https://images.unsplash.com/photo-1579829366248-204da8419767?q=80&w=1000' 
+      title: 'Unknown Item', 
+      price: 0, 
+      image: 'https://via.placeholder.com/400' 
   };
 
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [pickupAddress, setPickupAddress] = useState('');
+  const [dropAddress, setDropAddress] = useState('');
+  const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // --- Calendar Logic ---
   const handleDayPress = (day) => {
     if (!startDate || (startDate && endDate)) {
       setStartDate(day.dateString);
@@ -55,24 +58,66 @@ const RentBookingScreen = () => {
     return marks;
   }, [startDate, endDate]);
 
-  // --- Price Calculation ---
   const calculateTotal = () => {
       if (!startDate || !endDate) return 0;
       const start = new Date(startDate);
       const end = new Date(endDate);
       const diffTime = Math.abs(end - start);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // Include start day
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
       return diffDays * product.price;
   };
   
   const totalDays = (startDate && endDate) ? (new Date(endDate) - new Date(startDate)) / (1000 * 3600 * 24) + 1 : 0;
   const totalPrice = calculateTotal();
-  const serviceFee = Math.round(totalPrice * 0.05); // 5% fee
+  const serviceFee = Math.round(totalPrice * 0.05);
   const grandTotal = totalPrice + serviceFee;
+
+  const handleConfirmBooking = async () => {
+    if (!startDate || !endDate) return;
+
+    if (!pickupAddress.trim()) {
+      Alert.alert('Required', 'Please enter a pickup address');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const bookingData = {
+        itemId: product.id,
+        startDate: new Date(startDate).toISOString(),
+        endDate: new Date(endDate).toISOString(),
+        totalPrice: grandTotal,
+        pickupAddress,
+        dropAddress: dropAddress || pickupAddress, // Default to pickup if empty
+        notes
+      };
+
+      const response = await createBooking(bookingData);
+      
+      navigation.replace('BookingConfirmation', {
+        booking: {
+          ...response.booking,
+          startDate,
+          endDate,
+          startDate,
+          endDate,
+          totalAmount: grandTotal,
+          pickupAddress,
+          dropAddress: dropAddress || pickupAddress,
+          notes
+        },
+        product: product
+      });
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      Alert.alert('Error', 'Failed to create booking. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FFF" />
@@ -82,21 +127,23 @@ const RentBookingScreen = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Product Mini Summary */}
         <View style={styles.productSummary}>
-            <Image source={{ uri: product.image }} style={styles.miniImage} />
+            <Image 
+              source={{ uri: product.images?.[0] || product.image || 'https://via.placeholder.com/100' }} 
+              style={styles.miniImage} 
+            />
             <View style={{ flex: 1 }}>
                 <Text style={styles.miniTitle}>{product.title}</Text>
                 <Text style={styles.miniPrice}>₹{product.price}<Text style={{color:'#888', fontSize:12}}>/day</Text></Text>
             </View>
         </View>
 
-        {/* Calendar Section */}
         <View style={styles.calendarContainer}>
             <Calendar
                 onDayPress={handleDayPress}
                 markingType={'period'}
                 markedDates={markedDates}
+                minDate={new Date().toISOString().split('T')[0]}
                 theme={{
                     backgroundColor: 'transparent',
                     calendarBackground: 'transparent',
@@ -115,7 +162,44 @@ const RentBookingScreen = () => {
             />
         </View>
 
-        {/* Bill Summary */}
+        <View style={styles.addressSection}>
+             <Text style={styles.sectionTitle}>Details</Text>
+             
+             <View style={styles.inputGroup}>
+                 <Text style={styles.inputLabel}>Pickup Address</Text>
+                 <TextInput
+                     style={styles.input}
+                     placeholder="Where will you pick this up?"
+                     placeholderTextColor="#666"
+                     value={pickupAddress}
+                     onChangeText={setPickupAddress}
+                 />
+             </View>
+
+             <View style={styles.inputGroup}>
+                 <Text style={styles.inputLabel}>Drop Address (Optional)</Text>
+                 <TextInput
+                     style={styles.input}
+                     placeholder="Same as pickup if empty"
+                     placeholderTextColor="#666"
+                     value={dropAddress}
+                     onChangeText={setDropAddress}
+                 />
+             </View>
+
+             <View style={styles.inputGroup}>
+                 <Text style={styles.inputLabel}>Notes (Optional)</Text>
+                 <TextInput
+                     style={[styles.input, styles.textArea]}
+                     placeholder="Any special requests?"
+                     placeholderTextColor="#666"
+                     value={notes}
+                     onChangeText={setNotes}
+                     multiline
+                 />
+             </View>
+        </View>
+
         {startDate && endDate && (
             <View style={styles.billContainer}>
                 <Text style={styles.billTitle}>Price Details</Text>
@@ -143,17 +227,21 @@ const RentBookingScreen = () => {
         )}
       </ScrollView>
 
-      {/* Footer Action */}
       <View style={styles.footer}>
           <View>
               <Text style={styles.footerLabel}>Total</Text>
               <Text style={styles.footerPrice}>₹{startDate && endDate ? grandTotal : 0}</Text>
           </View>
           <TouchableOpacity 
-            style={[styles.bookBtn, (!startDate || !endDate) && styles.disabledBtn]}
-            disabled={!startDate || !endDate}
+            style={[styles.bookBtn, (!startDate || !endDate || loading) && styles.disabledBtn]}
+            disabled={!startDate || !endDate || loading}
+            onPress={handleConfirmBooking}
           >
-              <Text style={styles.bookBtnText}>Confirm Booking</Text>
+              {loading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.bookBtnText}>Confirm Booking</Text>
+              )}
           </TouchableOpacity>
       </View>
     </View>
@@ -186,9 +274,27 @@ const styles = StyleSheet.create({
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#1E1E23', padding: 20, paddingBottom: 40, borderTopLeftRadius: 24, borderTopRightRadius: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
   footerLabel: { color: '#888', fontSize: 12 },
   footerPrice: { color: '#FFF', fontSize: 24, fontWeight: '700' },
-  bookBtn: { backgroundColor: '#FF5A5F', paddingVertical: 16, paddingHorizontal: 32, borderRadius: 30 },
+  bookBtn: { backgroundColor: '#FF5A5F', paddingVertical: 16, paddingHorizontal: 32, borderRadius: 30, minWidth: 160, alignItems: 'center' },
   disabledBtn: { backgroundColor: '#444' },
   bookBtnText: { color: '#FFF', fontWeight: '700', fontSize: 16 },
+  
+  addressSection: { marginBottom: 24 },
+  sectionTitle: { color: '#FFF', fontSize: 18, fontWeight: '600', marginBottom: 12 },
+  inputGroup: { marginBottom: 16 },
+  inputLabel: { color: '#AAA', fontSize: 14, marginBottom: 8 },
+  input: {
+      backgroundColor: '#25252A',
+      borderRadius: 12,
+      padding: 12,
+      color: '#FFF',
+      fontSize: 15,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.05)',
+  },
+  textArea: {
+      minHeight: 80,
+      textAlignVertical: 'top',
+  },
 });
 
 export default RentBookingScreen;

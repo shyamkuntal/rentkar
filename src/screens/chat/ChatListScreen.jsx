@@ -57,6 +57,9 @@ const ChatListScreen = () => {
     const otherUser = getOtherParticipant(item.participants);
     const lastMsgTime = item.lastMessage ? new Date(item.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
     
+    // Fix: Access unread count from the map using user.id
+    const unreadCount = (item.unreadCount && user?.id) ? (item.unreadCount[user.id] || 0) : 0;
+
     return (
       <TouchableOpacity
         activeOpacity={0.7}
@@ -65,7 +68,8 @@ const ChatListScreen = () => {
           chatId: item.id,
           recipientId: otherUser.id,
           recipientName: otherUser.name,
-          recipientAvatar: otherUser.avatar
+          recipientAvatar: otherUser.avatar,
+          product: item.item
         })}
       >
         <GlassView style={styles.chatItem} borderRadius={20}>
@@ -83,12 +87,12 @@ const ChatListScreen = () => {
                 <Text style={styles.itemName}>Re: {item.item.title || 'Item'}</Text>
               )}
               <View style={styles.messageRow}>
-                <Text style={[styles.lastMessage, item.unreadCount > 0 && styles.unreadMessage]} numberOfLines={1}>
+                <Text style={[styles.lastMessage, unreadCount > 0 && styles.unreadMessage]} numberOfLines={1}>
                   {item.lastMessage?.content || 'No messages yet'}
                 </Text>
-                {item.unreadCount > 0 && (
+                {unreadCount > 0 && (
                   <View style={styles.unreadBadge}>
-                    <Text style={styles.unreadText}>{item.unreadCount}</Text>
+                    <Text style={styles.unreadText}>{unreadCount}</Text>
                   </View>
                 )}
               </View>

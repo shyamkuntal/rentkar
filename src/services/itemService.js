@@ -32,3 +32,9 @@ export const deleteItem = async (id) => {
 export const getMyListings = async () => {
   return await get(API_ENDPOINTS.MY_LISTINGS);
 };
+
+// Get items by owner ID
+export const getItemsByOwner = async (ownerId) => {
+  const url = `${API_ENDPOINTS.ITEMS}?ownerId=${ownerId}`;
+  return await get(url);
+};

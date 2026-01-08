@@ -3,6 +3,7 @@ package backend
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -27,19 +28,37 @@ func SetupRouter() http.Handler {
 	mux.HandleFunc("/api/auth/me", AuthMiddleware(HandleGetMe))
 
 	// User routes
-	mux.HandleFunc("/api/users/", HandleUserRoutes)
+	mux.HandleFunc("/api/users/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/block") {
+			AuthMiddleware(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method == http.MethodPost {
+					HandleBlockUser(w, r)
+				} else if r.Method == http.MethodDelete {
+					HandleUnblockUser(w, r)
+				}
+			})(w, r)
+			return
+		}
+		HandleUserRoutes(w, r)
+	})
+
+	// Report routes
+	mux.HandleFunc("/api/reports", AuthMiddleware(HandleReport))
 
 	// Item routes
 	mux.HandleFunc("/api/items", HandleItems)
 	mux.HandleFunc("/api/items/", HandleItemByID)
 	mux.HandleFunc("/api/items/my/listings", AuthMiddleware(HandleMyListings))
 
-	// Booking routes
+	// Booking routes - IMPORTANT: specific routes must come before wildcard /api/bookings/
 	mux.HandleFunc("/api/bookings", AuthMiddleware(HandleBookings))
+	mux.HandleFunc("/api/bookings/owner", AuthMiddleware(HandleOwnerBookings))
+	mux.HandleFunc("/api/bookings/pending-count", AuthMiddleware(HandlePendingRequestsCount))
 	mux.HandleFunc("/api/bookings/", AuthMiddleware(HandleBookingByID))
 
 	//Chat routes
 	mux.HandleFunc("/api/chats", AuthMiddleware(HandleChats))
+	mux.HandleFunc("/api/chats/unread-count", AuthMiddleware(HandleUnreadCount))
 	mux.HandleFunc("/api/chats/", AuthMiddleware(HandleChatByID))
 	mux.HandleFunc("/api/chats/messages", AuthMiddleware(HandleSendMessage))
 

@@ -80,7 +80,18 @@ func getItems(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	filter := bson.M{"status": "active"}
+	filter := bson.M{}
+	
+	// When filtering by specific owner, show all their items
+	// Otherwise only show active items
+	if ownerId := r.URL.Query().Get("ownerId"); ownerId != "" {
+		ownerObjId, _ := primitive.ObjectIDFromHex(ownerId)
+		filter["ownerId"] = ownerObjId
+		filter["status"] = "active" // Only show active items for now
+	} else {
+		filter["status"] = "active"
+	}
+	
 	if cat := r.URL.Query().Get("category"); cat != "" {
 		filter["category"] = cat
 	}

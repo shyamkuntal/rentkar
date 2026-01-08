@@ -1,17 +1,18 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Dimensions, Modal, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Dimensions, Modal, ActivityIndicator, Alert, RefreshControl, Switch } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Plus, Edit2, Trash2, Eye, MoreHorizontal } from 'lucide-react-native';
+import { Plus, Edit2, Trash2, Eye, MoreHorizontal, Check } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
-import { getMyListings, deleteItem } from '../../services/itemService';
+import { getMyListings, deleteItem, updateItem } from '../../services/itemService';
 
 const { width } = Dimensions.get('window');
 
 const MyListingsScreen = () => {
   const navigation = useNavigation();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [selectedAdId, setSelectedAdId] = useState(null);
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,25 +49,38 @@ const MyListingsScreen = () => {
 
   const confirmDelete = async () => {
     if (!selectedAdId) return;
-    
+
     try {
       await deleteItem(selectedAdId);
       setListings(prev => prev.filter(item => item.id !== selectedAdId));
       setDeleteModalVisible(false);
       setSelectedAdId(null);
-      Alert.alert('Success', 'Listing deleted successfully');
+      setTimeout(() => setSuccessModalVisible(true), 300);
     } catch (error) {
       console.error('Error deleting item:', error);
       Alert.alert('Error', 'Failed to delete listing');
     }
   };
 
+  const handleToggleStatus = async (itemId, currentStatus) => {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    try {
+      await updateItem(itemId, { status: newStatus });
+      setListings(prev => prev.map(item => 
+        item.id === itemId ? { ...item, status: newStatus } : item
+      ));
+    } catch (error) {
+      console.error('Error toggling status:', error);
+      Alert.alert('Error', 'Failed to update listing status');
+    }
+  };
+
   const renderListingItem = ({ item }) => (
     <TouchableOpacity onPress={() => navigation.navigate('MyAdDetail', { listing: item })} activeOpacity={0.9} style={{ marginBottom: 20 }}>
       <GlassView style={styles.listingCard}>
-        <Image 
-          source={{ uri: item.images && item.images.length > 0 ? item.images[0] : 'https://via.placeholder.com/400' }} 
-          style={styles.listingImage} 
+        <Image
+          source={{ uri: item.images && item.images.length > 0 ? item.images[0] : 'https://via.placeholder.com/400' }}
+          style={styles.listingImage}
         />
 
         <View style={styles.cardContent}>
@@ -82,12 +96,18 @@ const MyListingsScreen = () => {
           <View style={styles.statsRow}>
             <View style={styles.stat}>
               <Eye size={14} color="#888" />
-              <Text style={styles.statText}>{item.views} Views</Text>
+              <Text style={styles.statText}>{item.views || 0} Views</Text>
             </View>
-            <View style={[styles.statusBadge, item.status === 'active' ? styles.statusActive : styles.statusRented]}>
-              <Text style={[styles.statusText, item.status === 'active' ? styles.textActive : styles.textRented]}>
-                {item.status === 'active' ? 'Active' : 'Rented'}
+            <View style={styles.toggleContainer}>
+              <Text style={styles.toggleLabel}>
+                {item.status === 'active' ? 'Active' : 'Inactive'}
               </Text>
+              <Switch
+                value={item.status === 'active'}
+                onValueChange={() => handleToggleStatus(item.id, item.status)}
+                trackColor={{ false: '#444', true: 'rgba(76,175,80,0.4)' }}
+                thumbColor={item.status === 'active' ? '#4CAF50' : '#888'}
+              />
             </View>
           </View>
 
@@ -166,6 +186,29 @@ const MyListingsScreen = () => {
                   <Text style={styles.deleteText}>Delete</Text>
                 </TouchableOpacity>
               </View>
+            </View>
+          </GlassView>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={successModalVisible}
+        onRequestClose={() => setSuccessModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <GlassView style={styles.modalContent} intensity={40} borderRadius={24}>
+            <View style={styles.centeredModalWrapper}>
+              <View style={[styles.modalIconContainer, { borderColor: 'rgba(76, 175, 80, 0.3)', backgroundColor: 'rgba(76, 175, 80, 0.15)' }]}>
+                <Check size={32} color="#4CAF50" />
+              </View>
+              <Text style={styles.modalTitle}>Deleted!</Text>
+              <Text style={styles.modalDescription}>Your listing has been deleted successfully.</Text>
+
+              <TouchableOpacity style={styles.successBtn} onPress={() => setSuccessModalVisible(false)}>
+                <Text style={styles.successBtnText}>OK</Text>
+              </TouchableOpacity>
             </View>
           </GlassView>
         </View>
@@ -386,6 +429,32 @@ const styles = StyleSheet.create({
   emptySubtext: {
     color: '#888',
     fontSize: 14,
+  },
+  successBtn: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: '#4CAF50',
+    alignItems: 'center',
+    shadowColor: '#4CAF50',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  successBtnText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  toggleLabel: {
+    color: '#888',
+    fontSize: 12,
+    marginRight: 8,
   },
 });
 

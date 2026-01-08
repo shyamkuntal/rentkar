@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Platform,
   Dimensions,
-  SafeAreaView,
   StatusBar,
   Alert,
   ActivityIndicator
@@ -25,6 +24,7 @@ import {
 } from 'lucide-react-native';
 import { createChat } from '../../services/chatService';
 import { checkFavorite, addFavorite, removeFavorite } from '../../services/favoriteService';
+import { AuthContext } from '../../context/AuthContext';
 
 const colors = {
   primary: '#FF5A5F',
@@ -42,11 +42,15 @@ const { height } = Dimensions.get('window');
 const ProductDetailsScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
+  const { user } = useContext(AuthContext);
+
   const hideProfileLink = route.params?.hideProfileLink;
   const hideRentOption = route.params?.hideRentOption;
   const hideChatOption = route.params?.hideChatOption;
 
   const product = route.params?.product;
+  const isOwner = user?.id === product?.owner?.id;
+
   const [isFavorite, setIsFavorite] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
 
@@ -89,14 +93,14 @@ const ProductDetailsScreen = () => {
       setChatLoading(true);
       // Create or get existing chat
       const response = await createChat(product.id, product.owner.id);
-      
+
       const chat = response.chat; // Backend returns { chat: ... }
-      
+
       navigation.navigate('ChatScreen', {
         chatId: chat.id,
-        recipientId: product.owner.id,
-        recipientName: product.owner.name,
-        recipientAvatar: product.owner.avatar,
+        recipientId: product.owner?.id,
+        recipientName: product.owner?.name,
+        recipientAvatar: product.owner?.avatar,
         product: product
       });
     } catch (error) {
@@ -128,10 +132,10 @@ const ProductDetailsScreen = () => {
       >
         {/* Product Image Header */}
         <View style={styles.imageContainer}>
-          <Image source={{ uri: product.image }} style={styles.image} resizeMode="cover" />
+          <Image source={{ uri: product.images && product.images.length > 0 ? product.images[0] : (product.image || 'https://via.placeholder.com/400') }} style={styles.image} resizeMode="cover" />
           <View style={styles.imageOverlay} />
 
-          <SafeAreaView style={styles.headerSafeArea}>
+          <View style={styles.headerSafeArea}>
             <View style={styles.headerButtons}>
               <TouchableOpacity
                 style={styles.roundButton}
@@ -148,7 +152,7 @@ const ProductDetailsScreen = () => {
                 </TouchableOpacity>
               </View>
             </View>
-          </SafeAreaView>
+          </View>
         </View>
 
         {/* Main Content Body */}
@@ -174,15 +178,15 @@ const ProductDetailsScreen = () => {
 
           {/* Owner Profile Card */}
           <View style={styles.ownerCard}>
-            <Image source={{ uri: product.owner.avatar }} style={styles.ownerAvatar} />
+            <Image source={{ uri: product.owner?.avatar || 'https://via.placeholder.com/100' }} style={styles.ownerAvatar} />
             <View style={styles.ownerInfo}>
               <Text style={styles.ownerLabel}>Lender</Text>
-              <Text style={styles.ownerName}>{product.owner.name}</Text>
-              <Text style={styles.ownerResponse}>Response Rate: {product.owner.responseRate}</Text>
+              <Text style={styles.ownerName}>{product.owner?.name || 'Unknown User'}</Text>
+              <Text style={styles.ownerResponse}>Response Rate: {product.owner?.responseRate || 'N/A'}</Text>
             </View>
 
-            {/* Added onPress here, hidden if navigated from profile */}
-            {!hideProfileLink && (
+            {/* Added onPress here, hidden if navigated from profile or is owner */}
+            {!hideProfileLink && !isOwner && product.owner && (
               <TouchableOpacity style={styles.viewProfileBtn} onPress={handleViewProfile}>
                 <Text style={styles.viewProfileText}>View Profile</Text>
               </TouchableOpacity>
@@ -199,8 +203,8 @@ const ProductDetailsScreen = () => {
       </ScrollView>
 
       {/* Floating Glass Action Bar */}
-      {/* Floating Glass Action Bar - Only show if at least one option is available */}
-      {(!hideRentOption || !hideChatOption) && (
+      {/* Floating Glass Action Bar - Only show if at least one option is available and NOT owner */}
+      {(!hideRentOption || !hideChatOption) && !isOwner && (
         <View style={styles.bottomBarContainer}>
           <View style={styles.glassBackground}>
             {Platform.OS === 'android' ? (

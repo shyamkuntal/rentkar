@@ -1,16 +1,44 @@
-import React, { useContext } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useContext, useState } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
 import { User, Mail, Lock, Phone, ArrowRight, ChevronLeft } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 
 const RegisterScreen = () => {
   const navigation = useNavigation();
-  const { login } = useContext(AuthContext);
+  const { register } = useContext(AuthContext);
 
-  const handleRegister = () => {
-    // After registration, log in the user
-    login();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (!name || !email || !password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const result = await register({ name, email, phone, password });
+      if (!result.success) {
+        Alert.alert('Registration Failed', result.error || 'Something went wrong');
+      }
+      // If success, AuthContext updates userToken which typically triggers navigation change in AppStack
+    } catch (error) {
+      console.error('Register error:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -36,6 +64,8 @@ const RegisterScreen = () => {
               placeholder="Full Name"
               placeholderTextColor="#666"
               autoCapitalize="words"
+              value={name}
+              onChangeText={setName}
             />
           </View>
 
@@ -47,6 +77,8 @@ const RegisterScreen = () => {
               placeholderTextColor="#666"
               keyboardType="email-address"
               autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
             />
           </View>
 
@@ -57,6 +89,8 @@ const RegisterScreen = () => {
               placeholder="Phone Number"
               placeholderTextColor="#666"
               keyboardType="phone-pad"
+              value={phone}
+              onChangeText={setPhone}
             />
           </View>
 
@@ -67,6 +101,8 @@ const RegisterScreen = () => {
               placeholder="Password"
               placeholderTextColor="#666"
               secureTextEntry
+              value={password}
+              onChangeText={setPassword}
             />
           </View>
 
@@ -77,6 +113,8 @@ const RegisterScreen = () => {
               placeholder="Confirm Password"
               placeholderTextColor="#666"
               secureTextEntry
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
             />
           </View>
         </View>
@@ -87,9 +125,19 @@ const RegisterScreen = () => {
           <Text style={styles.termsLink}>Privacy Policy</Text>
         </Text>
 
-        <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-          <Text style={styles.registerButtonText}>Create Account</Text>
-          <ArrowRight size={20} color="#FFF" />
+        <TouchableOpacity
+          style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
+          onPress={handleRegister}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <>
+              <Text style={styles.registerButtonText}>Create Account</Text>
+              <ArrowRight size={20} color="#FFF" />
+            </>
+          )}
         </TouchableOpacity>
 
         <View style={styles.footer}>
@@ -175,6 +223,9 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: 30,
     gap: 8,
+  },
+  registerButtonDisabled: {
+    opacity: 0.7,
   },
   registerButtonText: {
     color: '#FFF',

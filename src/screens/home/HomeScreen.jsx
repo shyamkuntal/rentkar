@@ -7,7 +7,46 @@ import { categories } from '../../data/categories';
 import ItemCard from '../../components/ItemCard';
 import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
-import { Laptop, Car, Building2, Shirt, Dumbbell, Search, Filter, User, MapPin } from 'lucide-react-native';
+import { Laptop, Car, Building2, Shirt, Dumbbell, Search, Filter, User, MapPin, Home as HomeIcon } from 'lucide-react-native';
+
+// Icon map outside component to ensure stability
+const CATEGORY_ICONS = {
+  'Electronics': Laptop,
+  'Vehicles': Car,
+  'Home & Garden': HomeIcon,
+  'Fashion': Shirt,
+  'Sports': Dumbbell,
+};
+
+// Simplified CategoryBadge component without BlurView for reliable icon rendering
+const CategoryBadge = React.memo(({ category, isSelected, onPress }) => {
+  const IconComponent = CATEGORY_ICONS[category.name] || Laptop;
+  const iconProps = { size: 22, color: '#FFF', strokeWidth: 1.5 };
+
+  return (
+    <TouchableOpacity
+      style={[styles.categoryBadge, isSelected && styles.categoryBadgeSelected]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      {/* Simplified glass effect - no BlurView to prevent icon rendering issues */}
+      <View style={styles.categoryBackground} />
+      <View style={styles.categoryGlassTint} />
+      <View style={styles.categoryShine} />
+      <View style={styles.categoryBorder} />
+
+      <View style={styles.categoryContent}>
+        <IconComponent {...iconProps} />
+        <Text style={styles.categoryText}>{category.name}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}, (prevProps, nextProps) => {
+  return prevProps.isSelected === nextProps.isSelected && 
+         prevProps.category.id === nextProps.category.id;
+});
+
+CategoryBadge.displayName = 'CategoryBadge';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -58,54 +97,13 @@ const HomeScreen = () => {
     setSearchQuery(text);
   };
 
-  const getCategoryIcon = (name) => {
-    const iconProps = { size: 22, color: '#FFF', strokeWidth: 1.5 };
-    switch (name) {
-      case 'Electronics':
-        return <Laptop {...iconProps} />;
-      case 'Vehicles':
-        return <Car {...iconProps} />;
-      case 'Properties':
-        return <Building2 {...iconProps} />;
-      case 'Fashion':
-        return <Shirt {...iconProps} />;
-      case 'Sports Gear':
-        return <Dumbbell {...iconProps} />;
-      default:
-        return <Laptop {...iconProps} />;
-    }
-  };
-
-  const renderCategory = ({ item }) => {
-    const isSelected = selectedCategory === item.name;
-
-    return (
-      <TouchableOpacity
-        style={[styles.categoryBadge, isSelected && styles.categoryBadgeSelected]}
-        onPress={() => handleCategoryPress(item)}
-        activeOpacity={0.8}
-      >
-        {/* Glass layers for category badge */}
-        {Platform.OS === 'ios' ? (
-          <BlurView
-            style={StyleSheet.absoluteFill}
-            blurType="dark"
-            blurAmount={10}
-          />
-        ) : (
-          <View style={styles.androidBlur} />
-        )}
-        <View style={styles.categoryGlassTint} />
-        <View style={styles.categoryShine} />
-        <View style={styles.categoryBorder} />
-
-        <View style={styles.categoryContent}>
-          {getCategoryIcon(item.name)}
-          <Text style={styles.categoryText}>{item.name}</Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const renderCategory = ({ item }) => (
+    <CategoryBadge
+      category={item}
+      isSelected={selectedCategory === item.name}
+      onPress={() => handleCategoryPress(item)}
+    />
+  );
 
   const renderItem = ({ item }) => (
     <View style={styles.itemCardWrapper}>
@@ -202,6 +200,7 @@ const HomeScreen = () => {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoryList}
+            extraData={selectedCategory}
           />
         </View>
 
@@ -217,7 +216,7 @@ const HomeScreen = () => {
               </TouchableOpacity>
             )}
           </View>
-          
+
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color="#FF5A5F" />
@@ -227,8 +226,8 @@ const HomeScreen = () => {
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No items found</Text>
               <Text style={styles.emptySubtext}>
-                {searchQuery || selectedCategory 
-                  ? 'Try adjusting your search or filters' 
+                {searchQuery || selectedCategory
+                  ? 'Try adjusting your search or filters'
                   : 'Be the first to list an item!'}
               </Text>
             </View>
@@ -399,9 +398,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  androidBlur: {
+  categoryBackground: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(30, 30, 35, 0.9)',
+    backgroundColor: 'rgba(30, 30, 35, 0.95)',
+    borderRadius: 20,
   },
   categoryGlassTint: {
     ...StyleSheet.absoluteFill,

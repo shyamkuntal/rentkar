@@ -73,10 +73,17 @@ const AddItemScreen = () => {
 
     const handleImageSelect = () => {
         const mockImages = [
-            'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1000',
-            'https://images.unsplash.com/photo-1579829366248-204da8419767?q=80&w=1000&auto=format&fit=crop'
+            'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1000', // Camera
+            'https://images.unsplash.com/photo-1579829366248-204da8419767?q=80&w=1000&auto=format&fit=crop', // Laptop
+            'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=1000', // Headphones
+            'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=1000', // Shoes
+            'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=1000', // Polaroid
+            'https://images.unsplash.com/photo-1581235720704-06d3acfcb36f?auto=format&fit=crop&q=80&w=1000', // Furniture
+            'https://images.unsplash.com/photo-1503376763036-066120622c74?auto=format&fit=crop&q=80&w=1000', // Car
         ];
-        setImages([...images, mockImages[images.length % mockImages.length]]);
+        // Pick a random image
+        const randomImage = mockImages[Math.floor(Math.random() * mockImages.length)];
+        setImages([...images, randomImage]);
     };
 
     const handleSubmit = async () => {

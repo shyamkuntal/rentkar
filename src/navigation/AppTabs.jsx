@@ -1,10 +1,10 @@
-import React, { useRef, useEffect } from 'react';
-import { 
-  View, 
-  StyleSheet, 
-  Platform, 
-  TouchableOpacity, 
-  Text, 
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  Platform,
+  TouchableOpacity,
+  Text,
   useWindowDimensions,
   Animated,
   Easing
@@ -17,6 +17,7 @@ import MyRentalsScreen from '../screens/rent/MyRentalsScreen';
 import AddItemScreen from '../screens/list/AddItemScreen';
 import MyListingsScreen from '../screens/list/MyListingsScreen';
 import ChatListScreen from '../screens/chat/ChatListScreen';
+import { getPendingRequestsCount } from '../services/bookingService';
 
 // Icons
 import { Home, Calendar, FolderOpen, MessageCircle, Plus } from 'lucide-react-native';
@@ -48,21 +49,21 @@ const LiquidGlassSwitcher = ({ state, descriptors, navigation }) => {
   const { width } = useWindowDimensions();
   const mainTabs = state.routes.filter(route => route.name !== 'Post');
   const tabCount = mainTabs.length;
-  
+
   // Animation for active indicator
   const indicatorPosition = useRef(new Animated.Value(0)).current;
   const indicatorScale = useRef(new Animated.Value(1)).current;
-  
+
   // Calculate tab width
   const tabBarWidth = width - 40 - 72; // container width minus add button and gap
   const tabWidth = (tabBarWidth - 24) / tabCount; // minus padding
   const indicatorWidth = tabWidth - 8;
-  
+
   useEffect(() => {
     // Find the active tab index among main tabs
     const activeRoute = state.routes[state.index];
     const activeMainTabIndex = mainTabs.findIndex(r => r.key === activeRoute.key);
-    
+
     if (activeMainTabIndex >= 0) {
       // Animate indicator with scale bounce (like CSS animation)
       Animated.sequence([
@@ -99,23 +100,60 @@ const LiquidGlassSwitcher = ({ state, descriptors, navigation }) => {
     return null;
   }
 
+  // Pending requests count for Bookings badge
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const response = await getPendingRequestsCount();
+        setPendingRequestsCount(response.count || 0);
+      } catch (error) {
+        console.log('Error fetching pending count:', error);
+      }
+    };
+    fetchPendingCount();
+    // Refresh every time navigation state changes
+  }, [state.index]);
+
   const getIcon = (routeName, focused) => {
     const color = focused ? '#e1e1e1' : '#888';
     const size = 22;
     const strokeWidth = focused ? 2 : 1.5;
-    
-    switch (routeName) {
-      case 'Home':
-        return <Home size={size} color={color} strokeWidth={strokeWidth} />;
-      case 'Bookings':
-        return <Calendar size={size} color={color} strokeWidth={strokeWidth} />;
-      case 'Ads':
-        return <FolderOpen size={size} color={color} strokeWidth={strokeWidth} />;
-      case 'Chats':
-        return <MessageCircle size={size} color={color} strokeWidth={strokeWidth} />;
-      default:
-        return <Home size={size} color={color} />;
-    }
+
+    // Mock unread count - in real app connect to context/store
+    const unreadCount = routeName === 'Chats' ? 0 : 0;
+
+    const icon = (() => {
+      switch (routeName) {
+        case 'Home':
+          return <Home size={size} color={color} strokeWidth={strokeWidth} />;
+        case 'Bookings':
+          return <Calendar size={size} color={color} strokeWidth={strokeWidth} />;
+        case 'Ads':
+          return <FolderOpen size={size} color={color} strokeWidth={strokeWidth} />;
+        case 'Chats':
+          return <MessageCircle size={size} color={color} strokeWidth={strokeWidth} />;
+        default:
+          return <Home size={size} color={color} />;
+      }
+    })();
+
+    return (
+      <View>
+        {icon}
+        {routeName === 'Bookings' && pendingRequestsCount > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}</Text>
+          </View>
+        )}
+        {routeName === 'Chats' && unreadCount > 0 && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+          </View>
+        )}
+      </View>
+    );
   };
 
   return (
@@ -133,36 +171,36 @@ const LiquidGlassSwitcher = ({ state, descriptors, navigation }) => {
         ) : (
           <View style={styles.androidBlur} />
         )}
-        
+
         {/* Layer 2: Glass Background - color-mix(in srgb, #bbbbbc 12%, transparent) */}
         <View style={styles.glassBackground} />
-        
+
         {/* Layer 3: Inner border glow - inset 0 0 0 1px (light 3%) */}
         <View style={styles.innerBorderGlow} />
-        
+
         {/* Layer 4: Top-left shine - inset 1.8px 3px 0px -2px (light 27%) */}
         <View style={styles.shineTopLeft} />
-        
+
         {/* Layer 5: Bottom-right shine - inset -2px -2px 0px -2px (light 24%) */}
         <View style={styles.shineBottomRight} />
-        
+
         {/* Layer 6: Bottom inner shadow - inset -3px -8px 1px -6px (light 18%) */}
         <View style={styles.bottomInnerLight} />
-        
+
         {/* Layer 7: Dark inset shadow - inset -0.3px -1px 4px 0px (dark 24%) */}
         <View style={styles.darkInsetShadow} />
-        
+
         {/* Layer 8: Top dark shadow - inset -1.5px 2.5px 0px -2px (dark 40%) */}
         <View style={styles.topDarkShadow} />
-        
+
         {/* Layer 9: Outer border */}
         <View style={styles.outerBorder} />
-        
+
         {/* Animated Active Indicator - ::after pseudo element */}
-        <Animated.View 
+        <Animated.View
           style={[
             styles.activeIndicator,
-            { 
+            {
               width: indicatorWidth,
               transform: [
                 { translateX: indicatorPosition },
@@ -173,20 +211,20 @@ const LiquidGlassSwitcher = ({ state, descriptors, navigation }) => {
         >
           {/* Indicator Glass Background - color-mix(in srgb, #bbbbbc 36%, transparent) */}
           <View style={styles.indicatorGlass} />
-          
+
           {/* Indicator inner border */}
           <View style={styles.indicatorInnerBorder} />
-          
+
           {/* Indicator top shine */}
           <View style={styles.indicatorShineTop} />
-          
+
           {/* Indicator bottom shine */}
           <View style={styles.indicatorShineBottom} />
-          
+
           {/* Indicator outer border */}
           <View style={styles.indicatorOuterBorder} />
         </Animated.View>
-        
+
         {/* Tabs Row */}
         <View style={styles.tabsRow}>
           {mainTabs.map((route, index) => {
@@ -283,7 +321,7 @@ const AppTabs = () => {
       <Tab.Screen
         name="Post"
         component={AddItemScreen}
-        options={{ 
+        options={{
           tabBarLabel: 'Post',
           tabBarStyle: { display: 'none' },
         }}
@@ -302,7 +340,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  
+
   // Main Switcher - .switcher
   switcher: {
     flex: 1,
@@ -316,18 +354,18 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 12,
   },
-  
+
   androidBlur: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(27, 27, 29, 0.95)',
   },
-  
+
   // color-mix(in srgb, #bbbbbc 12%, transparent)
   glassBackground: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(187, 187, 188, 0.12)',
   },
-  
+
   // inset 0 0 0 1px color-mix(light 3%)
   innerBorderGlow: {
     position: 'absolute',
@@ -339,7 +377,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.03)',
   },
-  
+
   // inset 1.8px 3px 0px -2px color-mix(light 27%)
   shineTopLeft: {
     ...StyleSheet.absoluteFill,
@@ -351,7 +389,7 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
     borderBottomColor: 'transparent',
   },
-  
+
   // inset -2px -2px 0px -2px color-mix(light 24%)
   shineBottomRight: {
     ...StyleSheet.absoluteFill,
@@ -363,7 +401,7 @@ const styles = StyleSheet.create({
     borderTopColor: 'transparent',
     borderLeftColor: 'transparent',
   },
-  
+
   // inset -3px -8px 1px -6px color-mix(light 18%)
   bottomInnerLight: {
     position: 'absolute',
@@ -374,7 +412,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: 'rgba(255, 255, 255, 0.02)',
   },
-  
+
   // inset -0.3px -1px 4px 0px color-mix(dark 24%)
   darkInsetShadow: {
     position: 'absolute',
@@ -386,7 +424,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 999,
     borderTopRightRadius: 999,
   },
-  
+
   // inset -1.5px 2.5px 0px -2px color-mix(dark 40%)
   topDarkShadow: {
     position: 'absolute',
@@ -398,14 +436,14 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5,
     borderTopColor: 'rgba(0, 0, 0, 0.15)',
   },
-  
+
   outerBorder: {
     ...StyleSheet.absoluteFill,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
-  
+
   // Active Indicator - .switcher::after
   activeIndicator: {
     position: 'absolute',
@@ -416,13 +454,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     zIndex: 0,
   },
-  
+
   // color-mix(in srgb, #bbbbbc 36%, transparent)
   indicatorGlass: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(187, 187, 188, 0.36)',
   },
-  
+
   // Inner border glow
   indicatorInnerBorder: {
     position: 'absolute',
@@ -434,7 +472,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.05)',
   },
-  
+
   // inset 2px 1px (light 27%)
   indicatorShineTop: {
     ...StyleSheet.absoluteFill,
@@ -446,7 +484,7 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
     borderBottomColor: 'transparent',
   },
-  
+
   // inset -1.5px -1px (light 24%)
   indicatorShineBottom: {
     ...StyleSheet.absoluteFill,
@@ -458,14 +496,14 @@ const styles = StyleSheet.create({
     borderTopColor: 'transparent',
     borderLeftColor: 'transparent',
   },
-  
+
   indicatorOuterBorder: {
     ...StyleSheet.absoluteFill,
     borderRadius: 999,
     borderWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
-  
+
   // Tabs Row
   tabsRow: {
     flex: 1,
@@ -474,7 +512,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     zIndex: 10,
   },
-  
+
   // Tab Option - .switcher__option
   tabOption: {
     height: '100%',
@@ -482,22 +520,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
   },
-  
+
   iconWrapper: {
     marginBottom: 4,
   },
-  
+
   tabLabel: {
     fontSize: 10,
     fontWeight: '500',
     color: '#888',
   },
-  
+
   tabLabelActive: {
     color: '#e1e1e1',
     fontWeight: '600',
   },
-  
+
   // Add Button
   addButton: {
     width: 60,
@@ -510,12 +548,12 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 12,
   },
-  
+
   addButtonGlass: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(187, 187, 188, 0.12)',
   },
-  
+
   addButtonShine: {
     ...StyleSheet.absoluteFill,
     borderRadius: 30,
@@ -526,19 +564,39 @@ const styles = StyleSheet.create({
     borderRightColor: 'transparent',
     borderBottomColor: 'transparent',
   },
-  
+
   addButtonBorder: {
     ...StyleSheet.absoluteFill,
     borderRadius: 30,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.06)',
   },
-  
+
   addButtonIcon: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
+  },
+
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -8,
+    backgroundColor: '#FF5A5F',
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1,
+    borderColor: '#1A1A1A',
+  },
+  badgeText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: 'bold',
   },
 });
 

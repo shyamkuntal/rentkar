@@ -45,6 +45,7 @@ type Item struct {
 // Booking model
 type Booking struct {
 	ID            primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	TrackingID    string             `json:"trackingId" bson:"trackingId"`
 	ItemID        primitive.ObjectID `json:"itemId" bson:"itemId"`
 	Item          *Item              `json:"item,omitempty" bson:"-"`
 	RenterID      primitive.ObjectID `json:"renterId" bson:"renterId"`
@@ -56,6 +57,9 @@ type Booking struct {
 	TotalPrice    float64            `json:"totalPrice" bson:"totalPrice"`
 	Status        string             `json:"status" bson:"status"`
 	PaymentStatus string             `json:"paymentStatus" bson:"paymentStatus"`
+	PickupAddress string             `json:"pickupAddress" bson:"pickupAddress"`
+	DropAddress   string             `json:"dropAddress" bson:"dropAddress"`
+	Notes         string             `json:"notes" bson:"notes"`
 	CreatedAt     time.Time          `json:"createdAt" bson:"createdAt"`
 	UpdatedAt     time.Time          `json:"updatedAt" bson:"updatedAt"`
 }
@@ -90,4 +94,24 @@ type Favorite struct {
 	ItemID    primitive.ObjectID `json:"itemId" bson:"itemId"`
 	Item      *Item              `json:"item,omitempty" bson:"-"`
 	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
+}
+
+// BlockedUser model
+type BlockedUser struct {
+	ID        primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	UserID    primitive.ObjectID `json:"userId" bson:"userId"`       // Who blocked
+	BlockedID primitive.ObjectID `json:"blockedId" bson:"blockedId"` // Who is blocked
+	CreatedAt time.Time          `json:"createdAt" bson:"createdAt"`
+}
+
+// Report model
+type Report struct {
+	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	ReporterID  primitive.ObjectID `json:"reporterId" bson:"reporterId"`
+	ReportedID  primitive.ObjectID `json:"reportedId" bson:"reportedId"` // User ID or Item ID
+	TargetType  string             `json:"targetType" bson:"targetType"` // "user" or "item"
+	Reason      string             `json:"reason" bson:"reason"`
+	Description string             `json:"description" bson:"description"`
+	Status      string             `json:"status" bson:"status"` // "pending", "resolved"
+	CreatedAt   time.Time          `json:"createdAt" bson:"createdAt"`
 }

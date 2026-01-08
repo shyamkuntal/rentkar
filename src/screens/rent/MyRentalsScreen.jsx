@@ -1,21 +1,31 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
 import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Calendar, ChevronRight, MapPin, Clock } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
-import { getMyBookings } from '../../services/bookingService';
+import { AuthContext } from '../../context/AuthContext';
+import { getMyBookings, getOwnerBookings, getPendingRequestsCount } from '../../services/bookingService';
 
 const MyRentalsScreen = () => {
   const navigation = useNavigation();
+  const { user } = useContext(AuthContext); // Get current user
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('rentals'); // 'rentals' or 'requests'
+  const [pendingCount, setPendingCount] = useState(0);
 
   const loadBookings = async () => {
     try {
-      const response = await getMyBookings();
+      setLoading(true);
+      let response;
+      if (activeTab === 'rentals') {
+        response = await getMyBookings();
+      } else {
+        response = await getOwnerBookings();
+      }
       setBookings(response.bookings || []);
     } catch (error) {
       console.error('Error loading bookings:', error);
@@ -25,19 +35,34 @@ const MyRentalsScreen = () => {
     }
   };
 
+  // Fetch pending count on mount and focus
+  const loadPendingCount = async () => {
+    try {
+      const response = await getPendingRequestsCount();
+      setPendingCount(response.count || 0);
+    } catch (error) {
+      console.error('Error loading pending count:', error);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       loadBookings();
-    }, [])
+      loadPendingCount();
+    }, [activeTab])
   );
 
   const onRefresh = () => {
     setRefreshing(true);
     loadBookings();
+    loadPendingCount();
   };
 
   const handleBookingPress = (booking) => {
-    navigation.navigate('BookingDetail', { booking });
+    navigation.navigate('BookingDetail', {
+      booking,
+      viewMode: activeTab // Pass viewMode to detail screen
+    });
   };
 
   const formatDate = (dateString) => {
@@ -100,7 +125,29 @@ const MyRentalsScreen = () => {
         style={StyleSheet.absoluteFill}
       />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Bookings</Text>
+        <Text style={styles.headerTitle}>Bookings</Text>
+      </View>
+
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'rentals' && styles.activeTab]}
+          onPress={() => setActiveTab('rentals')}
+        >
+          <Text style={[styles.tabText, activeTab === 'rentals' && styles.activeTabText]}>My Rentals</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'requests' && styles.activeTab]}
+          onPress={() => setActiveTab('requests')}
+        >
+          <View style={styles.tabWithBadge}>
+            <Text style={[styles.tabText, activeTab === 'requests' && styles.activeTabText]}>Requests</Text>
+            {pendingCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{pendingCount > 9 ? '9+' : pendingCount}</Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -168,6 +215,51 @@ const styles = StyleSheet.create({
   emptySubtext: {
     color: '#888',
     fontSize: 14,
+  },
+
+  tabContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 25,
+    padding: 4,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 22,
+    alignItems: 'center',
+  },
+  activeTab: {
+    backgroundColor: '#FF5A5F',
+  },
+  tabText: {
+    color: '#888',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  activeTabText: {
+    color: '#FFF',
+  },
+  tabWithBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badge: {
+    backgroundColor: '#FF5A5F',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 6,
+    paddingHorizontal: 5,
+  },
+  badgeText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });
 

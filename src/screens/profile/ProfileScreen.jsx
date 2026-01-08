@@ -66,9 +66,9 @@ const ProfileScreen = () => {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* User Card */}
         <GlassCard contentStyle={styles.userCardContent}>
-          <Image 
-            source={{ uri: user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200' }} 
-            style={styles.avatar} 
+          <Image
+            source={{ uri: user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200' }}
+            style={styles.avatar}
           />
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{user?.name || 'User'}</Text>
@@ -100,22 +100,22 @@ const ProfileScreen = () => {
         {/* Menu Options */}
         <GlassCard contentStyle={styles.menuContent}>
           {menuItems.map((item, index) => (
-            <TouchableOpacity 
-              key={index} 
+            <TouchableOpacity
+              key={index}
               style={[styles.menuItem, index < menuItems.length - 1 && styles.menuItemBorder]}
               onPress={() => {
                 if (item.route === 'Favorites') {
-                   // Navigate to favorites if implemented, for now log or use what's available
-                   // Assuming specific screen or params on HomeScreen
-                   // navigation.navigate('Favorites');
-                   Alert.alert('Coming Soon', 'Favorites screen is under construction');
+                  // Navigate to favorites if implemented, for now log or use what's available
+                  // Assuming specific screen or params on HomeScreen
+                  // navigation.navigate('Favorites');
+                  Alert.alert('Coming Soon', 'Favorites screen is under construction');
                 } else if (item.route === 'Settings') {
                   navigation.navigate('Settings');
                 } else if (item.route === 'EditProfile') {
                   navigation.navigate('EditProfile');
                 } else {
-                   // Default fallback
-                   Alert.alert('Coming Soon', 'This feature is under development');
+                  // Default fallback
+                  Alert.alert('Coming Soon', 'This feature is under development');
                 }
               }}
             >
@@ -131,8 +131,8 @@ const ProfileScreen = () => {
           <LogOut size={22} color="#FF4545" />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
-        
-        <View style={{height: 100}} />
+
+        <View style={{ height: 100 }} />
       </ScrollView>
 
       {/* Logout Modal */}
@@ -143,24 +143,22 @@ const ProfileScreen = () => {
         onRequestClose={() => setLogoutModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <GlassView style={styles.modalContent} intensity={40} borderRadius={24}>
-            <View style={styles.centeredModalWrapper}>
-              <View style={styles.modalIconContainer}>
-                <LogOut size={32} color="#FF4545" style={{ marginLeft: 4 }} />
-              </View>
-              <Text style={styles.modalTitle}>Log Out?</Text>
-              <Text style={styles.modalDescription}>Are you sure you want to log out of your account?</Text>
-
-              <View style={styles.modalActions}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => setLogoutModalVisible(false)}>
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.deleteBtn} onPress={confirmLogout}>
-                  <Text style={styles.deleteText}>Log Out</Text>
-                </TouchableOpacity>
-              </View>
+          <View style={styles.modalBox}>
+            <View style={styles.modalIconContainer}>
+              <LogOut size={32} color="#FF4545" style={{ marginLeft: 4 }} />
             </View>
-          </GlassView>
+            <Text style={styles.modalTitle}>Log Out?</Text>
+            <Text style={styles.modalDescription}>Are you sure you want to log out of your account?</Text>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setLogoutModalVisible(false)}>
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.deleteBtn} onPress={confirmLogout}>
+                <Text style={styles.deleteText}>Log Out</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
     </View>
@@ -362,6 +360,14 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     padding: 24,
+  },
+  modalBox: {
+    width: '100%',
+    maxWidth: 340,
+    padding: 24,
+    backgroundColor: '#2A2A30',
+    borderRadius: 24,
+    alignItems: 'center',
   },
   centeredModalWrapper: {
     alignItems: 'center',

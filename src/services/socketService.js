@@ -28,38 +28,50 @@ class SocketService {
 
     if (!token) {
       console.error('No token available for WebSocket connection');
-      return;
+      return Promise.reject('No token');
+    }
+
+    // If already connected, return immediately
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      console.log('WebSocket already connected');
+      return Promise.resolve(this.ws);
     }
 
     // Add token as query parameter for authentication
     const wsUrl = `${WS_URL}?token=${token}`;
 
-    this.ws = new WebSocket(wsUrl);
+    return new Promise((resolve, reject) => {
+      this.ws = new WebSocket(wsUrl);
 
-    this.ws.onopen = () => {
-      console.log('WebSocket connected');
-      this.reconnectAttempts = 0;
-    };
+      this.ws.onopen = () => {
+        console.log('WebSocket connected');
+        this.reconnectAttempts = 0;
+        resolve(this.ws);
+      };
 
-    this.ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        this.handleMessage(data);
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    };
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          this.handleMessage(data);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+        }
+      };
 
-    this.ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
+      this.ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        reject(error);
+      };
 
-    this.ws.onclose = () => {
-      console.log('WebSocket disconnected');
-      this.attemptReconnect();
-    };
+      this.ws.onclose = () => {
+        console.log('WebSocket disconnected');
+        this.attemptReconnect();
+      };
+    });
+  };
 
-    return this.ws;
+  isConnected = () => {
+    return this.ws && this.ws.readyState === WebSocket.OPEN;
   };
 
   attemptReconnect = async () => {

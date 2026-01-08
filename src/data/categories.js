@@ -1,6 +1,7 @@
 export const categories = [
-  { id: '1', name: 'Electronics', icon: 'camera' },
-  { id: '2', name: 'Furniture', icon: 'sofa' },
-  { id: '3', name: 'Vehicles', icon: 'car' },
-  { id: '4', name: 'Tools', icon: 'hammer' }
+  { id: '1', name: 'Electronics', icon: 'laptop' },
+  { id: '2', name: 'Vehicles', icon: 'car' },
+  { id: '3', name: 'Fashion', icon: 'shirt' },
+  { id: '4', name: 'Home & Garden', icon: 'home' },
+  { id: '5', name: 'Sports', icon: 'dumbbell' },
 ];
