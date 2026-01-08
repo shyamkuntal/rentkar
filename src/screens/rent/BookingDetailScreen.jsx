@@ -1,18 +1,50 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, SafeAreaView, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft, Calendar, User, MapPin, Receipt, ArrowRight } from 'lucide-react-native';
+import { createChat } from '../../services/chatService';
 
 const BookingDetailScreen = () => {
     const navigation = useNavigation();
     const route = useRoute();
     const { booking } = route.params;
 
+    const product = booking.item || {};
+    const owner = product.owner || {};
+
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+
+    const startDate = formatDate(booking.startDate);
+    const endDate = formatDate(booking.endDate);
+
     const handleItemPress = () => {
-        navigation.navigate('ItemDetail', { 
-            product: booking.product,
-            hideRentOption: true 
+        navigation.navigate('ItemDetail', {
+            product: product,
+            hideRentOption: true,
+            hideChatOption: true
         });
+    };
+
+    const handleMessageLender = async () => {
+        if (!owner.id) return;
+        try {
+            const response = await createChat(product.id, owner.id);
+            const chat = response.chat;
+            navigation.navigate('ChatScreen', {
+                chatId: chat.id,
+                recipientId: owner.id,
+                recipientName: owner.name,
+                recipientAvatar: owner.avatar,
+                product: product
+            });
+        } catch (error) {
+            console.error('Error starting chat:', error);
+            Alert.alert('Error', 'Failed to start chat');
+        }
     };
 
     return (
@@ -28,87 +60,87 @@ const BookingDetailScreen = () => {
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
-                    {/* Status Banner */}
-                    <View style={styles.statusBanner}>
-                        <Text style={styles.statusTitle}>Booking Confirmed</Text>
-                        <Text style={styles.statusSub}>Reference ID: #BK-{booking.id}5892</Text>
-                    </View>
+                {/* Status Banner */}
+                <View style={styles.statusBanner}>
+                    <Text style={styles.statusTitle}>Booking {booking.status}</Text>
+                    <Text style={styles.statusSub}>Reference ID: #{booking.id.slice(-8).toUpperCase()}</Text>
+                </View>
 
-                    {/* Item Card - Clickable */}
-                    <Text style={styles.sectionTitle}>Rented Item</Text>
-                    <TouchableOpacity style={styles.itemCard} onPress={handleItemPress}>
-                        <Image source={{ uri: booking.product.image }} style={styles.itemImage} />
-                        <View style={styles.itemInfo}>
-                            <Text style={styles.itemTitle}>{booking.product.title}</Text>
-                            <View style={styles.locationRow}>
-                                <MapPin size={12} color="#888" />
-                                <Text style={styles.locationText}>{booking.product.location}</Text>
-                            </View>
-                            <View style={styles.viewDetailsRow}>
-                                <Text style={styles.viewDetailsText}>View Item Details</Text>
-                                <ArrowRight size={14} color="#FF5A5F" />
-                            </View>
+                {/* Item Card - Clickable */}
+                <Text style={styles.sectionTitle}>Rented Item</Text>
+                <TouchableOpacity style={styles.itemCard} onPress={handleItemPress}>
+                    <Image
+                        source={{ uri: product.images && product.images.length > 0 ? product.images[0] : (product.image || 'https://via.placeholder.com/100') }}
+                        style={styles.itemImage}
+                    />
+                    <View style={styles.itemInfo}>
+                        <Text style={styles.itemTitle}>{product.title}</Text>
+                        <View style={styles.locationRow}>
+                            <MapPin size={12} color="#888" />
+                            <Text style={styles.locationText}>{product.location}</Text>
                         </View>
+                        <View style={styles.viewDetailsRow}>
+                            <Text style={styles.viewDetailsText}>View Item Details</Text>
+                            <ArrowRight size={14} color="#FF5A5F" />
+                        </View>
+                    </View>
+                </TouchableOpacity>
+
+                {/* Timeline */}
+                <View style={styles.timelineSection}>
+                    <View style={styles.timelineItem}>
+                        <View style={styles.timelineIconBg}>
+                            <Calendar size={20} color="#FFF" />
+                        </View>
+                        <View>
+                            <Text style={styles.timelineLabel}>Start Date</Text>
+                            <Text style={styles.timelineValue}>{startDate}</Text>
+                            <Text style={styles.timelineTime}>10:00 AM</Text>
+                        </View>
+                    </View>
+                    <View style={styles.timelineConnector} />
+                    <View style={styles.timelineItem}>
+                        <View style={[styles.timelineIconBg, { backgroundColor: '#333' }]}>
+                            <Calendar size={20} color="#888" />
+                        </View>
+                        <View>
+                            <Text style={styles.timelineLabel}>End Date</Text>
+                            <Text style={styles.timelineValue}>{endDate}</Text>
+                            <Text style={styles.timelineTime}>10:00 AM</Text>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Lender Info */}
+                <Text style={styles.sectionTitle}>Lender Details</Text>
+                <View style={styles.lenderCard}>
+                    <Image source={{ uri: owner.avatar || 'https://via.placeholder.com/50' }} style={styles.lenderAvatar} />
+                    <View style={styles.lenderInfo}>
+                        <Text style={styles.lenderName}>{owner.name || 'Unknown'}</Text>
+                        <Text style={styles.lenderSub}>Lender • {owner.rating || 'N/A'} ★</Text>
+                    </View>
+                    <TouchableOpacity
+                        style={styles.msgBtn}
+                        onPress={handleMessageLender}
+                    >
+                        <Text style={styles.msgBtnText}>Message</Text>
                     </TouchableOpacity>
+                </View>
 
-                    {/* Timeline */}
-                    <View style={styles.timelineSection}>
-                         <View style={styles.timelineItem}>
-                            <View style={styles.timelineIconBg}>
-                                <Calendar size={20} color="#FFF" />
-                            </View>
-                            <View>
-                                <Text style={styles.timelineLabel}>Start Date</Text>
-                                <Text style={styles.timelineValue}>{booking.dates.split('-')[0].trim()}</Text>
-                                <Text style={styles.timelineTime}>10:00 AM</Text>
-                            </View>
-                         </View>
-                         <View style={styles.timelineConnector} />
-                         <View style={styles.timelineItem}>
-                            <View style={[styles.timelineIconBg, { backgroundColor: '#333' }]}>
-                                <Calendar size={20} color="#888" />
-                            </View>
-                            <View>
-                                <Text style={styles.timelineLabel}>End Date</Text>
-                                <Text style={styles.timelineValue}>{booking.dates.split('-')[1].trim()}</Text>
-                                <Text style={styles.timelineTime}>10:00 AM</Text>
-                            </View>
-                         </View>
+                {/* Payment Summary */}
+                <Text style={styles.sectionTitle}>Payment Summary</Text>
+                <View style={styles.billContainer}>
+                    <View style={styles.billRow}>
+                        <Text style={styles.billLabel}>Total Amount Paid</Text>
+                        <Text style={styles.billValue}>₹{booking.totalPrice}</Text>
                     </View>
-
-                    {/* Lender Info */}
-                    <Text style={styles.sectionTitle}>Lender Details</Text>
-                    <View style={styles.lenderCard}>
-                         <Image source={{ uri: booking.product.owner.avatar }} style={styles.lenderAvatar} />
-                         <View style={styles.lenderInfo}>
-                              <Text style={styles.lenderName}>{booking.product.owner.name}</Text>
-                              <Text style={styles.lenderSub}>Lender • {booking.product.owner.rating} ★</Text>
-                         </View>
-                         <TouchableOpacity 
-                             style={styles.msgBtn}
-                             onPress={() => navigation.navigate('ChatScreen', {
-                                 owner: booking.product.owner,
-                                 product: booking.product
-                             })}
-                         >
-                              <Text style={styles.msgBtnText}>Message</Text>
-                         </TouchableOpacity>
+                    <View style={styles.billRow}>
+                        <Text style={styles.billLabel}>Payment Method</Text>
+                        <Text style={styles.billValue}>UPI</Text>
                     </View>
+                </View>
 
-                    {/* Payment Summary */}
-                    <Text style={styles.sectionTitle}>Payment Summary</Text>
-                    <View style={styles.billContainer}>
-                        <View style={styles.billRow}>
-                            <Text style={styles.billLabel}>Total Amount Paid</Text>
-                            <Text style={styles.billValue}>₹{booking.totalPrice}</Text>
-                        </View>
-                         <View style={styles.billRow}>
-                            <Text style={styles.billLabel}>Payment Method</Text>
-                            <Text style={styles.billValue}>UPI</Text>
-                        </View>
-                    </View>
-
-                </ScrollView>
+            </ScrollView>
         </View>
     );
 };

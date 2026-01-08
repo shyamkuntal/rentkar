@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Dimensions, Modal } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, Dimensions, Modal, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Plus, Edit2, Trash2, Eye, MoreHorizontal } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
+import { getMyListings, deleteItem } from '../../services/itemService';
 
 const { width } = Dimensions.get('window');
 
@@ -12,53 +13,61 @@ const MyListingsScreen = () => {
   const navigation = useNavigation();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [selectedAdId, setSelectedAdId] = useState(null);
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Mock Listings Data
-  const listings = [
-    {
-      id: '1',
-      title: 'Sony Alpha a7 III Kit',
-      price: 1200,
-      image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1000',
-      views: 245,
-      status: 'active',
-      date: 'Posted Oct 10'
-    },
-    {
-      id: '2',
-      title: 'GoPro Hero 11 Black',
-      price: 350,
-      image: 'https://images.unsplash.com/photo-1588785392665-f6d4a541417d?auto=format&fit=crop&q=80&w=1000',
-      views: 128,
-      status: 'rented',
-      date: 'Posted Sep 15'
-    },
-    {
-      id: '3',
-      title: 'DJI Mavic 3 Drone',
-      price: 3000,
-      image: 'https://images.unsplash.com/photo-1506947411487-a56738267384?auto=format&fit=crop&q=80&w=1000',
-      views: 89,
-      status: 'active',
-      date: 'Posted Nov 01'
+  const loadListings = async () => {
+    try {
+      const response = await getMyListings();
+      setListings(response.items || []);
+    } catch (error) {
+      console.error('Error loading listings:', error);
+      Alert.alert('Error', 'Failed to load your listings');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  ];
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadListings();
+    }, [])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadListings();
+  };
 
   const handleDeletePress = (id) => {
     setSelectedAdId(id);
     setDeleteModalVisible(true);
   };
 
-  const confirmDelete = () => {
-    console.log('Deleting ad:', selectedAdId);
-    setDeleteModalVisible(false);
-    setSelectedAdId(null);
+  const confirmDelete = async () => {
+    if (!selectedAdId) return;
+    
+    try {
+      await deleteItem(selectedAdId);
+      setListings(prev => prev.filter(item => item.id !== selectedAdId));
+      setDeleteModalVisible(false);
+      setSelectedAdId(null);
+      Alert.alert('Success', 'Listing deleted successfully');
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      Alert.alert('Error', 'Failed to delete listing');
+    }
   };
 
   const renderListingItem = ({ item }) => (
     <TouchableOpacity onPress={() => navigation.navigate('MyAdDetail', { listing: item })} activeOpacity={0.9} style={{ marginBottom: 20 }}>
       <GlassView style={styles.listingCard}>
-        <Image source={{ uri: item.image }} style={styles.listingImage} />
+        <Image 
+          source={{ uri: item.images && item.images.length > 0 ? item.images[0] : 'https://via.placeholder.com/400' }} 
+          style={styles.listingImage} 
+        />
 
         <View style={styles.cardContent}>
           <View style={styles.headerRow}>
@@ -121,6 +130,17 @@ const MyListingsScreen = () => {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+        ListEmptyComponent={
+          !loading && (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No listings yet</Text>
+              <Text style={styles.emptySubtext}>Create your first rental listing now!</Text>
+            </View>
+          )
+        }
       />
 
       <Modal
@@ -351,6 +371,21 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '600',
     fontSize: 16,
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    color: '#888',
+    fontSize: 14,
   },
 });
 

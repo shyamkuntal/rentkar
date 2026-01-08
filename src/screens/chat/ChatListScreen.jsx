@@ -1,94 +1,103 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { colors } from '../../theme/colors';
 import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
+import { getChats } from '../../services/chatService';
+import socketService from '../../services/socketService';
+import { AuthContext } from '../../context/AuthContext';
 
 const ChatListScreen = () => {
   const navigation = useNavigation();
+  const { user } = useContext(AuthContext);
+  const [chats, setChats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Mock Chat Data
-  const chats = [
-    {
-      id: '1',
-      user: 'Vikram Singh',
-      avatar: 'https://randomuser.me/api/portraits/men/45.jpg',
-      item: 'DJI Mavic Air 2',
-      image: 'https://images.unsplash.com/photo-1579829366248-204da8419767?q=80&w=1000&auto=format&fit=crop',
-      price: 800,
-      lastMessage: 'Is the drone available for this weekend?',
-      time: '2m ago',
-      unread: 2
-    },
-    {
-      id: '2',
-      user: 'Priya Patel',
-      avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
-      item: 'GoPro Hero 11',
-      image: 'https://images.unsplash.com/photo-1588785392665-f6d4a541417d?auto=format&fit=crop&q=80&w=1000',
-      price: 350,
-      lastMessage: 'Thanks for the quick response!',
-      time: '1h ago',
-      unread: 0
-    },
-    {
-      id: '3',
-      user: 'Rahul Kumar',
-      avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
-      item: 'Sony Alpha a7 III',
-      image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1000',
-      price: 1200,
-      lastMessage: 'Can I pick it up tomorrow morning?',
-      time: '3h ago',
-      unread: 1
-    },
-    {
-      id: '4',
-      user: 'Anjali Gupta',
-      avatar: 'https://randomuser.me/api/portraits/women/68.jpg',
-      item: 'Canon 50mm Lens',
-      image: 'https://images.unsplash.com/photo-1617005082133-548c4dd27f35?auto=format&fit=crop&q=80&w=400',
-      price: 250,
-      lastMessage: 'The lens condition is pristine.',
-      time: '1d ago',
-      unread: 0
+  const loadChats = async () => {
+    try {
+      const response = await getChats();
+      setChats(response.chats || []);
+    } catch (error) {
+      console.error('Error loading chats:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  ];
+  };
 
-  const renderChatItem = ({ item }) => (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      style={{ marginBottom: 12 }}
-      onPress={() => navigation.navigate('ChatScreen', {
-        owner: { name: item.user, avatar: item.avatar },
-        product: { title: item.item, image: item.image, price: item.price }
-      })}
-    >
-      <GlassView style={styles.chatItem} borderRadius={20}>
-        <View style={styles.chatContentRow}>
-          <Image source={{ uri: item.avatar }} style={styles.avatar} />
-          <View style={styles.chatInfo}>
-            <View style={styles.chatHeader}>
-              <Text style={styles.userName}>{item.user}</Text>
-              <Text style={styles.time}>{item.time}</Text>
-            </View>
-            <Text style={styles.itemName}>Re: {item.item}</Text>
-            <View style={styles.messageRow}>
-              <Text style={[styles.lastMessage, item.unread > 0 && styles.unreadMessage]} numberOfLines={1}>
-                {item.lastMessage}
-              </Text>
-              {item.unread > 0 && (
-                <View style={styles.unreadBadge}>
-                  <Text style={styles.unreadText}>{item.unread}</Text>
-                </View>
+  useFocusEffect(
+    useCallback(() => {
+      loadChats();
+      socketService.connect();
+      
+      // Listen for new messages to update list order/content
+      socketService.onMessage(() => {
+        loadChats(); // Refresh list on new message
+      });
+
+      return () => {
+        socketService.disconnect();
+      };
+    }, [])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadChats();
+  };
+
+  const getOtherParticipant = (participants) => {
+    if (!participants || participants.length === 0) return { name: 'Unknown', avatar: '' };
+    return participants.find(p => p.id !== user?.id) || participants[0];
+  };
+
+  const renderChatItem = ({ item }) => {
+    const otherUser = getOtherParticipant(item.participants);
+    const lastMsgTime = item.lastMessage ? new Date(item.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    
+    return (
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={{ marginBottom: 12 }}
+        onPress={() => navigation.navigate('ChatScreen', {
+          chatId: item.id,
+          recipientId: otherUser.id,
+          recipientName: otherUser.name,
+          recipientAvatar: otherUser.avatar
+        })}
+      >
+        <GlassView style={styles.chatItem} borderRadius={20}>
+          <View style={styles.chatContentRow}>
+            <Image 
+              source={{ uri: otherUser.avatar || 'https://via.placeholder.com/100' }} 
+              style={styles.avatar} 
+            />
+            <View style={styles.chatInfo}>
+              <View style={styles.chatHeader}>
+                <Text style={styles.userName}>{otherUser.name}</Text>
+                <Text style={styles.time}>{lastMsgTime}</Text>
+              </View>
+              {item.item && (
+                <Text style={styles.itemName}>Re: {item.item.title || 'Item'}</Text>
               )}
+              <View style={styles.messageRow}>
+                <Text style={[styles.lastMessage, item.unreadCount > 0 && styles.unreadMessage]} numberOfLines={1}>
+                  {item.lastMessage?.content || 'No messages yet'}
+                </Text>
+                {item.unreadCount > 0 && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadText}>{item.unreadCount}</Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
-        </View>
-      </GlassView>
-    </TouchableOpacity>
-  );
+        </GlassView>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -101,13 +110,27 @@ const ChatListScreen = () => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
       </View>
-      <FlatList
-        data={chats}
-        renderItem={renderChatItem}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+
+      {loading ? (
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 50 }} />
+      ) : (
+        <FlatList
+          data={chats}
+          renderItem={renderChatItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No messages yet</Text>
+              <Text style={styles.emptySubtext}>Start chatting with lenders!</Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 };
@@ -198,6 +221,21 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 10,
     fontWeight: 'bold',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    color: '#888',
+    fontSize: 14,
   },
 });
 

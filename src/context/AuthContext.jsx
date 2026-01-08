@@ -1,44 +1,110 @@
 import React, { createContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { loginUser, registerUser, getCurrentUser } from '../services/authService';
+import { saveToken, removeToken, getToken } from '../services/api';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [userToken, setUserToken] = useState(null);
-  const [isLoading, setIsLoading] = useState(false); // Changed to false for dev speed, usually true
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = () => {
-    setIsLoading(true);
-    setUserToken('mock_token');
-    AsyncStorage.setItem('userToken', 'mock_token');
-    setIsLoading(false);
-  };
-
-  const logout = () => {
-    setIsLoading(true);
-    setUserToken(null);
-    AsyncStorage.removeItem('userToken');
-    setIsLoading(false);
-  };
-
-  const isLoggedIn = async () => {
+  // Login function
+  const login = async (email, password) => {
     try {
       setIsLoading(true);
-      let userToken = await AsyncStorage.getItem('userToken');
-      setUserToken(userToken);
-    } catch (e) {
-      console.log(`isLogged in error ${e}`);
+      const response = await loginUser({ email, password });
+
+      if (response.token) {
+        await saveToken(response.token);
+        setUserToken(response.token);
+        setUser(response.user);
+        return { success: true };
+      }
+      return { success: false, error: 'No token received' };
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, error: error.message };
     } finally {
       setIsLoading(false);
     }
-  }
+  };
+
+  // Register function
+  const register = async (userData) => {
+    try {
+      setIsLoading(true);
+      const response = await registerUser(userData);
+
+      if (response.token) {
+        await saveToken(response.token);
+        setUserToken(response.token);
+        setUser(response.user);
+        return { success: true };
+      }
+      return { success: false, error: 'No token received' };
+    } catch (error) {
+      console.error('Register error:', error);
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Logout function
+  const logout = async () => {
+    try {
+      setIsLoading(true);
+      await removeToken();
+      setUserToken(null);
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Check if user is logged in
+  const isLoggedIn = async () => {
+    try {
+      setIsLoading(true);
+      const token = await getToken();
+
+      if (token) {
+        setUserToken(token);
+        // Fetch user data
+        try {
+          const response = await getCurrentUser();
+          setUser(response.user);
+        } catch (error) {
+          // Token might be invalid, clear it
+          await removeToken();
+          setUserToken(null);
+          setUser(null);
+        }
+      }
+    } catch (error) {
+      console.error('isLoggedIn error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     isLoggedIn();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ login, logout, isLoading, userToken }}>
+    <AuthContext.Provider value={{
+      login,
+      register,
+      logout,
+      isLoading,
+      userToken,
+      user,
+      setUser
+    }}>
       {children}
     </AuthContext.Provider>
   );

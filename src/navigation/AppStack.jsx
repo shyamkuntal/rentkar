@@ -9,6 +9,7 @@ import ProfileScreen from '../screens/profile/ProfileScreen';
 import MyAdDetailScreen from '../screens/list/MyAdDetailScreen';
 import EditListingScreen from '../screens/list/EditListingScreen';
 import ChatScreen from '../screens/chat/ChatScren';
+import FavoritesScreen from '../screens/profile/FavoritesScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -25,6 +26,7 @@ const AppStack = () => {
       <Stack.Screen name="MyAdDetail" component={MyAdDetailScreen} />
       <Stack.Screen name="EditListing" component={EditListingScreen} />
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
+      <Stack.Screen name="Favorites" component={FavoritesScreen} />
     </Stack.Navigator>
   );
 };

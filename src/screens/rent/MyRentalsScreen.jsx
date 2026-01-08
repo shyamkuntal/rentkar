@@ -1,105 +1,97 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ScrollView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, Image, TouchableOpacity, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Calendar, ChevronRight, MapPin, Clock } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
+import { getMyBookings } from '../../services/bookingService';
 
 const MyRentalsScreen = () => {
   const navigation = useNavigation();
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Mock Bookings Data
-  const bookings = [
-    {
-      id: '1',
-      status: 'active', // active, completed, cancelled
-      product: {
-        id: '1',
-        title: 'DJI Mavic Air 2 Drone Combo',
-        image: 'https://images.unsplash.com/photo-1579829366248-204da8419767?q=80&w=1000&auto=format&fit=crop',
-        price: 800,
-        rateUnit: '/day',
-        location: 'Bandra, Mumbai',
-        rating: 4.9,
-        reviews: 128,
-        description: 'Rent this amazing DJI Mavic Air 2 drone for your next shoot!',
-        owner: {
-          name: 'Vikram Singh',
-          avatar: 'https://randomuser.me/api/portraits/men/45.jpg',
-          rating: 4.8,
-          responseRate: '98%',
-          joined: 'Dec 2023'
-        }
-      },
-      dates: 'Oct 12 - Oct 15',
-      totalPrice: 2400,
-      timeLeft: '2 Days left'
-    },
-    {
-      id: '2',
-      status: 'completed',
-      product: {
-        id: '4',
-        title: 'Royal Enfield Classic 350',
-        image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=1000',
-        price: 900,
-        rateUnit: '/day',
-        location: 'Whitefield, Bangalore',
-        rating: 4.6,
-        reviews: 210,
-        description: 'Cruise the city in style with this well-maintained Royal Enfield Classic 350.',
-        owner: {
-          name: 'Vikas Singh',
-          avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=200',
-          responseRate: '92%',
-          rating: 4.5,
-          joined: 'Nov 2022'
-        }
-      },
-      dates: 'Sep 20 - Sep 22',
-      totalPrice: 1800,
+  const loadBookings = async () => {
+    try {
+      const response = await getMyBookings();
+      setBookings(response.bookings || []);
+    } catch (error) {
+      console.error('Error loading bookings:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  ];
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadBookings();
+    }, [])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadBookings();
+  };
 
   const handleBookingPress = (booking) => {
-    // Navigate to a Booking Detail Screen which we will create next
-    // OR navigate directly to ItemDetail if that's what the user wants immediately.
-    // User asked: "shows booking details and when we click on the item then it shows the item details"
-    // So we need a BookingDetailScreen.
     navigation.navigate('BookingDetail', { booking });
   };
 
-  const renderBookingItem = ({ item }) => (
-    <TouchableOpacity onPress={() => handleBookingPress(item)} activeOpacity={0.8} style={{ marginBottom: 16 }}>
-      <GlassView style={styles.card} borderRadius={16}>
-        <View style={styles.cardHeader}>
-          <View style={[styles.statusBadge, item.status === 'active' ? styles.statusActive : styles.statusCompleted]}>
-            <Text style={styles.statusText}>{item.status === 'active' ? 'Active' : 'Completed'}</Text>
-          </View>
-          <Text style={styles.price}>₹{item.totalPrice}</Text>
-        </View>
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
-        <View style={styles.cardContent}>
-          <Image source={{ uri: item.product.image }} style={styles.prodImage} />
-          <View style={styles.info}>
-            <Text style={styles.title} numberOfLines={2}>{item.product.title}</Text>
-            <View style={styles.dateRow}>
-              <Calendar size={14} color="#888" />
-              <Text style={styles.dateText}>{item.dates}</Text>
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'confirmed': return styles.statusActive;
+      case 'completed': return styles.statusCompleted;
+      case 'cancelled': return styles.statusCancelled;
+      default: return styles.statusPending;
+    }
+  };
+
+  const renderBookingItem = ({ item }) => {
+    // Determine product - booking.item from backend
+    const product = item.item || {};
+    const startDate = formatDate(item.startDate);
+    const endDate = formatDate(item.endDate);
+    const imageUri = product.images && product.images.length > 0 ? product.images[0] : (product.image || 'https://via.placeholder.com/100');
+
+    return (
+      <TouchableOpacity onPress={() => handleBookingPress(item)} activeOpacity={0.8} style={{ marginBottom: 16 }}>
+        <GlassView style={styles.card} borderRadius={16}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.statusBadge, getStatusColor(item.status)]}>
+              <Text style={styles.statusText}>{item.status}</Text>
             </View>
-            {item.status === 'active' && (
-              <View style={styles.timeLeftBadge}>
-                <Clock size={12} color="#FFA500" />
-                <Text style={styles.timeLeftText}>{item.timeLeft}</Text>
-              </View>
-            )}
+            <Text style={styles.price}>₹{item.totalPrice}</Text>
           </View>
-          <ChevronRight size={20} color="#666" />
-        </View>
-      </GlassView>
-    </TouchableOpacity>
-  );
+
+          <View style={styles.cardContent}>
+            <Image source={{ uri: imageUri }} style={styles.prodImage} />
+            <View style={styles.info}>
+              <Text style={styles.title} numberOfLines={2}>{product.title || 'Item Unavailable'}</Text>
+              <View style={styles.dateRow}>
+                <Calendar size={14} color="#888" />
+                <Text style={styles.dateText}>{startDate} - {endDate}</Text>
+              </View>
+              {item.status === 'confirmed' && (
+                <View style={styles.timeLeftBadge}>
+                  <Clock size={12} color="#FFA500" />
+                  <Text style={styles.timeLeftText}>Ongoing</Text>
+                </View>
+              )}
+            </View>
+            <ChevronRight size={20} color="#666" />
+          </View>
+        </GlassView>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -110,13 +102,27 @@ const MyRentalsScreen = () => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Bookings</Text>
       </View>
-      <FlatList
-        data={bookings}
-        renderItem={renderBookingItem}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+
+      {loading ? (
+        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 50 }} />
+      ) : (
+        <FlatList
+          data={bookings}
+          renderItem={renderBookingItem}
+          keyExtractor={item => item.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No bookings yet</Text>
+              <Text style={styles.emptySubtext}>Rent items to see them here</Text>
+            </View>
+          }
+        />
+      )}
     </View>
   );
 };
@@ -145,7 +151,24 @@ const styles = StyleSheet.create({
   dateRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   dateText: { color: '#888', fontSize: 13, marginLeft: 6 },
   timeLeftBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  timeLeftText: { color: '#FFA500', fontSize: 12, marginLeft: 4, fontWeight: '500' }
+  timeLeftText: { color: '#FFA500', fontSize: 12, marginLeft: 4, fontWeight: '500' },
+  statusPending: { backgroundColor: 'rgba(255, 193, 7, 0.2)' },
+  statusCancelled: { backgroundColor: 'rgba(255, 69, 69, 0.2)' },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    color: '#888',
+    fontSize: 14,
+  },
 });
 
 export default MyRentalsScreen;

@@ -1,13 +1,17 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Image, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Image, Platform, KeyboardAvoidingView, Alert, Modal } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ChevronLeft, ChevronRight, Upload, Check, Camera, MapPin, Laptop, Car, Shirt, Home as HomeIcon, Dumbbell } from 'lucide-react-native';
 import { BlurView } from '@react-native-community/blur';
 import LinearGradient from 'react-native-linear-gradient';
+import { createItem } from '../../services/itemService';
+import GlassView from '../../components/GlassView';
 
 const AddItemScreen = () => {
     const navigation = useNavigation();
     const [step, setStep] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const [successModalVisible, setSuccessModalVisible] = useState(false);
 
     // Form State
     const [category, setCategory] = useState(null);
@@ -47,6 +51,7 @@ const AddItemScreen = () => {
                 setPrice('');
                 setLocation('');
                 setImages([]);
+                setSuccessModalVisible(false);
             };
         }, [])
     );
@@ -74,7 +79,36 @@ const AddItemScreen = () => {
         setImages([...images, mockImages[images.length % mockImages.length]]);
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
+        try {
+            setLoading(true);
+
+            const itemData = {
+                title,
+                description,
+                category,
+                subCategory,
+                price: parseFloat(price),
+                location,
+                images
+            };
+
+            await createItem(itemData);
+
+            setSuccessModalVisible(true);
+        } catch (error) {
+            console.error('Error creating item:', error);
+            Alert.alert(
+                'Error',
+                error.message || 'Failed to create listing. Please try again.'
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSuccessClose = () => {
+        setSuccessModalVisible(false);
         navigation.navigate('Ads');
     };
 
@@ -82,7 +116,7 @@ const AddItemScreen = () => {
     const renderCategoryCard = (cat) => {
         const isSelected = category === cat.name;
         const IconComponent = cat.icon;
-        
+
         return (
             <TouchableOpacity
                 key={cat.id}
@@ -226,7 +260,7 @@ const AddItemScreen = () => {
                 colors={['#2B2D42', '#1A1A2E', '#16161E']}
                 style={StyleSheet.absoluteFill}
             />
-            
+
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={handleBack} style={styles.backButton}>
@@ -241,7 +275,7 @@ const AddItemScreen = () => {
                 <View style={[styles.progressFill, { width: `${step * 25}%` }]} />
             </View>
 
-            <ScrollView 
+            <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
@@ -254,37 +288,60 @@ const AddItemScreen = () => {
             </ScrollView>
 
             <View style={styles.footer}>
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={[
                         styles.nextButton,
                         ((step === 1 && (!category || !subCategory)) ||
-                         (step === 2 && (!title || !description || !location)) ||
-                         (step === 3 && (!price || images.length === 0))) && styles.nextButtonDisabled
-                    ]} 
+                            (step === 2 && (!title || !description || !location)) ||
+                            (step === 3 && (!price || images.length === 0))) && styles.nextButtonDisabled
+                    ]}
                     onPress={handleNext}
                 >
                     <Text style={styles.nextBtnText}>{step === 4 ? 'Post Now' : 'Next'}</Text>
                     {step !== 4 && <ChevronRight size={20} color="#FFF" />}
                 </TouchableOpacity>
             </View>
+
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={successModalVisible}
+                onRequestClose={handleSuccessClose}
+            >
+                <View style={styles.modalOverlay}>
+                    <GlassView style={styles.modalContent} intensity={40} borderRadius={24}>
+                        <View style={styles.centeredModalWrapper}>
+                            <View style={[styles.modalIconContainer, { borderColor: 'rgba(76, 175, 80, 0.3)', backgroundColor: 'rgba(76, 175, 80, 0.15)' }]}>
+                                <Check size={32} color="#4CAF50" />
+                            </View>
+                            <Text style={styles.modalTitle}>Success!</Text>
+                            <Text style={styles.modalDescription}>Your listing has been created successfully.</Text>
+
+                            <TouchableOpacity style={styles.successBtn} onPress={handleSuccessClose}>
+                                <Text style={styles.successBtnText}>My Ads</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </GlassView>
+                </View>
+            </Modal>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#1A1A1A' },
-    header: { 
-        flexDirection: 'row', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        paddingTop: 60, 
-        paddingHorizontal: 20, 
-        paddingBottom: 20 
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingTop: 60,
+        paddingHorizontal: 20,
+        paddingBottom: 20
     },
     headerTitle: { fontSize: 18, fontWeight: '600', color: '#FFF' },
-    backButton: { 
-        width: 40, 
-        height: 40, 
+    backButton: {
+        width: 40,
+        height: 40,
         borderRadius: 20,
         backgroundColor: 'rgba(255,255,255,0.1)',
         justifyContent: 'center',
@@ -300,9 +357,9 @@ const styles = StyleSheet.create({
 
     // Category Cards
     gridContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-    catCard: { 
-        width: '48%', 
-        marginBottom: 12, 
+    catCard: {
+        width: '48%',
+        marginBottom: 12,
         padding: 20,
         backgroundColor: 'rgba(255,255,255,0.05)',
         borderRadius: 16,
@@ -310,7 +367,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)',
     },
-    catCardSelected: { 
+    catCardSelected: {
         backgroundColor: 'rgba(255,90,95,0.1)',
         borderColor: '#FF5A5F',
     },
@@ -328,19 +385,19 @@ const styles = StyleSheet.create({
     },
     catText: { color: '#888', fontSize: 14, fontWeight: '500', textAlign: 'center' },
     catTextSelected: { color: '#FFF', fontWeight: '600' },
-    checkBadge: { 
-        position: 'absolute', 
-        top: 10, 
-        right: 10, 
-        backgroundColor: '#FF5A5F', 
-        borderRadius: 10, 
-        padding: 3, 
+    checkBadge: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        backgroundColor: '#FF5A5F',
+        borderRadius: 10,
+        padding: 3,
     },
 
     // Subcategories
     subCatContainer: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10 },
-    subButton: { 
-        paddingHorizontal: 16, 
+    subButton: {
+        paddingHorizontal: 16,
         paddingVertical: 10,
         backgroundColor: 'rgba(255,255,255,0.05)',
         borderRadius: 20,
@@ -349,7 +406,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)',
     },
-    subButtonSelected: { 
+    subButtonSelected: {
         backgroundColor: 'rgba(255,90,95,0.15)',
         borderColor: '#FF5A5F',
     },
@@ -358,7 +415,7 @@ const styles = StyleSheet.create({
 
     // Form Inputs
     label: { color: '#888', marginBottom: 8, marginTop: 16, fontSize: 14 },
-    inputWrapper: { 
+    inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.05)',
@@ -367,9 +424,9 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)',
     },
-    input: { 
-        paddingVertical: 16, 
-        color: '#FFF', 
+    input: {
+        paddingVertical: 16,
+        color: '#FFF',
         fontSize: 16,
         flex: 1,
     },
@@ -380,33 +437,33 @@ const styles = StyleSheet.create({
     // Photos
     photosGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10 },
     photoThumb: { width: 100, height: 100, borderRadius: 12, marginRight: 12, marginBottom: 12 },
-    addPhotoBtn: { 
-        width: 100, 
-        height: 100, 
-        borderRadius: 12, 
-        borderWidth: 2, 
-        borderColor: '#FF5A5F', 
-        borderStyle: 'dashed', 
-        justifyContent: 'center', 
+    addPhotoBtn: {
+        width: 100,
+        height: 100,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: '#FF5A5F',
+        borderStyle: 'dashed',
+        justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: 'rgba(255,90,95,0.05)',
     },
     addPhotoText: { color: '#FF5A5F', fontSize: 11, marginTop: 4, fontWeight: '500' },
 
     // Success Step
-    successIcon: { 
-        width: 80, 
-        height: 80, 
-        borderRadius: 40, 
-        backgroundColor: '#00D084', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        marginBottom: 20 
+    successIcon: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#00D084',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20
     },
     successTitle: { fontSize: 28, fontWeight: '700', color: '#FFF', marginBottom: 10 },
     successSub: { fontSize: 16, color: '#888', textAlign: 'center', marginBottom: 30 },
-    summaryCard: { 
-        width: '100%', 
+    summaryCard: {
+        width: '100%',
         padding: 20,
         backgroundColor: 'rgba(255,255,255,0.05)',
         borderRadius: 16,
@@ -417,27 +474,86 @@ const styles = StyleSheet.create({
     summaryVal: { color: '#FFF', fontWeight: '600' },
 
     // Footer
-    footer: { 
+    footer: {
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        padding: 20, 
+        padding: 20,
         paddingBottom: 40,
         backgroundColor: '#1A1A1A',
     },
-    nextButton: { 
-        backgroundColor: '#FF5A5F', 
-        flexDirection: 'row', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        padding: 16, 
-        borderRadius: 30 
+    nextButton: {
+        backgroundColor: '#FF5A5F',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 30
     },
     nextButtonDisabled: {
         backgroundColor: '#444',
     },
     nextBtnText: { color: '#FFF', fontSize: 18, fontWeight: '700', marginRight: 8 },
+
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    modalContent: {
+        width: '100%',
+        maxWidth: 340,
+        padding: 24,
+    },
+    centeredModalWrapper: {
+        alignItems: 'center',
+        width: '100%',
+    },
+    modalIconContainer: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+        borderWidth: 1,
+        alignSelf: 'center',
+    },
+    modalTitle: {
+        fontSize: 22,
+        fontWeight: '700',
+        color: '#FFF',
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    modalDescription: {
+        fontSize: 15,
+        color: '#CCC',
+        textAlign: 'center',
+        marginBottom: 24,
+        lineHeight: 22,
+    },
+    successBtn: {
+        width: '100%',
+        paddingVertical: 14,
+        borderRadius: 14,
+        backgroundColor: '#4CAF50',
+        alignItems: 'center',
+        shadowColor: '#4CAF50',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
+    },
+    successBtnText: {
+        color: '#FFF',
+        fontWeight: '600',
+        fontSize: 16,
+    },
 });
 
 export default AddItemScreen;

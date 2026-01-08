@@ -1,8 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, ScrollView, TextInput, Image, TouchableOpacity, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, ScrollView, TextInput, Image, TouchableOpacity, Platform, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from '@react-native-community/blur';
-import { items } from '../../data/items';
+import { getItems } from '../../services/itemService';
 import { categories } from '../../data/categories';
 import ItemCard from '../../components/ItemCard';
 import GlassView from '../../components/GlassView';
@@ -11,6 +11,52 @@ import { Laptop, Car, Building2, Shirt, Dumbbell, Search, Filter, User, MapPin }
 
 const HomeScreen = () => {
   const navigation = useNavigation();
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    loadItems();
+  }, [selectedCategory, searchQuery]);
+
+  const loadItems = async () => {
+    try {
+      setLoading(true);
+      const filters = {};
+
+      if (selectedCategory) {
+        filters.category = selectedCategory;
+      }
+
+      if (searchQuery) {
+        filters.search = searchQuery;
+      }
+
+      const response = await getItems(filters);
+      setItems(response.items || []);
+    } catch (error) {
+      console.error('Error loading items:', error);
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadItems();
+    setRefreshing(false);
+  };
+
+  const handleCategoryPress = (category) => {
+    setSelectedCategory(category.name === selectedCategory ? null : category.name);
+  };
+
+  const handleSearch = (text) => {
+    setSearchQuery(text);
+  };
 
   const getCategoryIcon = (name) => {
     const iconProps = { size: 22, color: '#FFF', strokeWidth: 1.5 };
@@ -30,32 +76,36 @@ const HomeScreen = () => {
     }
   };
 
-  const renderCategory = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.categoryBadge}
-      onPress={() => navigation.navigate('Category', { category: item })}
-      activeOpacity={0.8}
-    >
-      {/* Glass layers for category badge */}
-      {Platform.OS === 'ios' ? (
-        <BlurView
-          style={StyleSheet.absoluteFill}
-          blurType="dark"
-          blurAmount={10}
-        />
-      ) : (
-        <View style={styles.androidBlur} />
-      )}
-      <View style={styles.categoryGlassTint} />
-      <View style={styles.categoryShine} />
-      <View style={styles.categoryBorder} />
-      
-      <View style={styles.categoryContent}>
-        {getCategoryIcon(item.name)}
-        <Text style={styles.categoryText}>{item.name}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderCategory = ({ item }) => {
+    const isSelected = selectedCategory === item.name;
+
+    return (
+      <TouchableOpacity
+        style={[styles.categoryBadge, isSelected && styles.categoryBadgeSelected]}
+        onPress={() => handleCategoryPress(item)}
+        activeOpacity={0.8}
+      >
+        {/* Glass layers for category badge */}
+        {Platform.OS === 'ios' ? (
+          <BlurView
+            style={StyleSheet.absoluteFill}
+            blurType="dark"
+            blurAmount={10}
+          />
+        ) : (
+          <View style={styles.androidBlur} />
+        )}
+        <View style={styles.categoryGlassTint} />
+        <View style={styles.categoryShine} />
+        <View style={styles.categoryBorder} />
+
+        <View style={styles.categoryContent}>
+          {getCategoryIcon(item.name)}
+          <Text style={styles.categoryText}>{item.name}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderItem = ({ item }) => (
     <View style={styles.itemCardWrapper}>
@@ -87,14 +137,14 @@ const HomeScreen = () => {
               <Text style={styles.locationText}>Mumbai, India</Text>
             </TouchableOpacity>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.avatarButton} 
+
+          <TouchableOpacity
+            style={styles.avatarButton}
             onPress={() => navigation.navigate('Profile')}
           >
-            <Image 
-              source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} 
-              style={styles.avatar} 
+            <Image
+              source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
+              style={styles.avatar}
             />
           </TouchableOpacity>
         </View>
@@ -113,13 +163,15 @@ const HomeScreen = () => {
           <View style={styles.searchTint} />
           <View style={styles.searchShine} />
           <View style={styles.searchBorder} />
-          
+
           <View style={styles.searchContent}>
             <Search size={18} color="#888" />
             <TextInput
               style={styles.searchInput}
               placeholder="Search for rentals..."
               placeholderTextColor="#888"
+              value={searchQuery}
+              onChangeText={handleSearch}
             />
             <TouchableOpacity style={styles.filterButton}>
               <Filter size={18} color="#FFF" />
@@ -128,9 +180,17 @@ const HomeScreen = () => {
         </View>
       </View>
 
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#FF5A5F"
+            colors={['#FF5A5F']}
+          />
+        }
       >
         {/* Categories */}
         <View style={styles.section}>
@@ -148,19 +208,40 @@ const HomeScreen = () => {
         {/* Recommended Items */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recommended</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAll}>See All</Text>
-            </TouchableOpacity>
+            <Text style={styles.sectionTitle}>
+              {selectedCategory || 'Recommended'}
+            </Text>
+            {selectedCategory && (
+              <TouchableOpacity onPress={() => setSelectedCategory(null)}>
+                <Text style={styles.clearFilter}>Clear</Text>
+              </TouchableOpacity>
+            )}
           </View>
-          <FlatList
-            data={items}
-            renderItem={renderItem}
-            keyExtractor={item => item.id}
-            numColumns={2}
-            scrollEnabled={false}
-            columnWrapperStyle={styles.columnWrapper}
-          />
+          
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#FF5A5F" />
+              <Text style={styles.loadingText}>Loading items...</Text>
+            </View>
+          ) : items.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No items found</Text>
+              <Text style={styles.emptySubtext}>
+                {searchQuery || selectedCategory 
+                  ? 'Try adjusting your search or filters' 
+                  : 'Be the first to list an item!'}
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={items}
+              renderItem={renderItem}
+              keyExtractor={item => item.id.toString()}
+              numColumns={2}
+              scrollEnabled={false}
+              columnWrapperStyle={styles.columnWrapper}
+            />
+          )}
         </View>
       </ScrollView>
     </View>
@@ -172,7 +253,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#1A1A1A',
   },
-  
+
   // Header
   header: {
     paddingTop: 60,
@@ -213,7 +294,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
   },
-  
+
   // Search Bar Glass
   searchContainer: {
     height: 50,
@@ -271,12 +352,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  
+
   // Scroll Content
   scrollContent: {
     paddingBottom: 120,
   },
-  
+
   // Sections
   section: {
     marginBottom: 24,
@@ -300,7 +381,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 16,
   },
-  
+
   // Categories
   categoryList: {
     paddingRight: 20,
@@ -355,7 +436,44 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'center',
   },
-  
+  categoryBadgeSelected: {
+    borderColor: '#FF5A5F',
+    borderWidth: 2,
+  },
+
+  // Loading & Empty States
+  loadingContainer: {
+    paddingVertical: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: '#888',
+    marginTop: 12,
+    fontSize: 14,
+  },
+  emptyContainer: {
+    paddingVertical: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    color: '#888',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  clearFilter: {
+    color: '#FF5A5F',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
   // Items Grid
   columnWrapper: {
     justifyContent: 'space-between',

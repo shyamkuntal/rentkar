@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   Dimensions,
   SafeAreaView,
   StatusBar,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { BlurView } from '@react-native-community/blur';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -21,6 +23,8 @@ import {
   Share2,
   Star
 } from 'lucide-react-native';
+import { createChat } from '../../services/chatService';
+import { checkFavorite, addFavorite, removeFavorite } from '../../services/favoriteService';
 
 const colors = {
   primary: '#FF5A5F',
@@ -42,46 +46,75 @@ const ProductDetailsScreen = () => {
   const hideRentOption = route.params?.hideRentOption;
   const hideChatOption = route.params?.hideChatOption;
 
-  const product = route.params?.product || {
-    id: '1',
-    title: 'DJI Mavic Air 2 Drone Combo',
-    image: 'https://images.unsplash.com/photo-1579829366248-204da8419767?q=80&w=1000&auto=format&fit=crop',
-    price: 800,
-    rateUnit: '/day',
-    location: 'Bandra, Mumbai',
-    rating: 4.9,
-    reviews: 128,
-    description:
-      'Rent this amazing DJI Mavic Air 2 drone for your next shoot! It captures stunning 4K/60fps video and 48MP photos. Features include 34-minute flight time, 10km video transmission, and advanced obstacle avoidance.',
-    owner: {
-      name: 'Vikram Singh',
-      avatar: 'https://randomuser.me/api/portraits/men/45.jpg',
-      responseRate: '98%',
-      location: 'Mumbai, India',
-      joined: 'Dec 2023',
-      rating: 4.8,
-    },
+  const product = route.params?.product;
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+
+  useEffect(() => {
+    if (product?.id) {
+      checkFavoriteStatus();
+    }
+  }, [product?.id]);
+
+  const checkFavoriteStatus = async () => {
+    try {
+      const response = await checkFavorite(product.id);
+      setIsFavorite(response.isFavorite);
+    } catch (error) {
+      console.log('Error checking favorite:', error);
+    }
   };
 
-  // --- Navigation Handlers ---
+  const toggleFavorite = async () => {
+    try {
+      if (isFavorite) {
+        await removeFavorite(product.id);
+        setIsFavorite(false);
+      } else {
+        await addFavorite(product.id);
+        setIsFavorite(true);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      Alert.alert('Error', 'Failed to update favorite status');
+    }
+  };
 
   const handleRentNow = () => {
-    // Pass the product details to the booking screen
     navigation.navigate('RentBooking', { product: product });
   };
 
-  const handleChat = () => {
-    // Navigate to individual Chat Screen
-    navigation.navigate('ChatScreen', {
-      product: product,
-      owner: product.owner
-    });
+  const handleChat = async () => {
+    try {
+      setChatLoading(true);
+      // Create or get existing chat
+      const response = await createChat(product.id, product.owner.id);
+      
+      const chat = response.chat; // Backend returns { chat: ... }
+      
+      navigation.navigate('ChatScreen', {
+        chatId: chat.id,
+        recipientId: product.owner.id,
+        recipientName: product.owner.name,
+        recipientAvatar: product.owner.avatar,
+        product: product
+      });
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      Alert.alert('Error', 'Failed to start chat. Please try again.');
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   const handleViewProfile = () => {
-    // Pass owner details to profile
-    navigation.navigate('LenderProfile', { owner: product.owner });
+    // If we have owner data, navigate
+    if (product?.owner) {
+      navigation.navigate('LenderProfile', { owner: product.owner });
+    }
   };
+
+  if (!product) return null; // Handle loading state properly if needed
 
   return (
     <View style={styles.container}>

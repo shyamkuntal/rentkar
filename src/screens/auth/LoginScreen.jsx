@@ -1,13 +1,31 @@
-import React, { useContext } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useContext, useState } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
 import { Mail, Lock, ArrowRight } from 'lucide-react-native';
 
 const LoginScreen = ({ navigation }) => {
   const { login } = useContext(AuthContext);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+
+    setLoading(true);
+    const result = await login(email, password);
+    setLoading(false);
+
+    if (!result.success) {
+      Alert.alert('Login Failed', result.error || 'Invalid credentials');
+    }
+  };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
@@ -19,22 +37,28 @@ const LoginScreen = ({ navigation }) => {
         <View style={styles.inputContainer}>
           <View style={styles.inputWrapper}>
             <Mail size={20} color="#888" />
-            <TextInput 
+            <TextInput
               style={styles.input}
               placeholder="Email address"
               placeholderTextColor="#666"
               keyboardType="email-address"
               autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
+              editable={!loading}
             />
           </View>
 
           <View style={styles.inputWrapper}>
             <Lock size={20} color="#888" />
-            <TextInput 
+            <TextInput
               style={styles.input}
               placeholder="Password"
               placeholderTextColor="#666"
               secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+              editable={!loading}
             />
           </View>
 
@@ -43,9 +67,19 @@ const LoginScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.loginButton} onPress={login}>
-          <Text style={styles.loginButtonText}>Sign In</Text>
-          <ArrowRight size={20} color="#FFF" />
+        <TouchableOpacity
+          style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <>
+              <Text style={styles.loginButtonText}>Sign In</Text>
+              <ArrowRight size={20} color="#FFF" />
+            </>
+          )}
         </TouchableOpacity>
 
         <View style={styles.divider}>
@@ -140,6 +174,9 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 18,
     fontWeight: '700',
+  },
+  loginButtonDisabled: {
+    opacity: 0.6,
   },
   divider: {
     flexDirection: 'row',

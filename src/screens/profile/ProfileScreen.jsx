@@ -1,19 +1,32 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import React, { useContext, useState } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Platform, Alert, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from '@react-native-community/blur';
 import { ChevronRight, Settings, CreditCard, Bell, Shield, Heart, LogOut, User } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { AuthContext } from '../../context/AuthContext';
+import GlassView from '../../components/GlassView';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
+  const { user, logout } = useContext(AuthContext);
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+
+  const handleLogout = () => {
+    setLogoutModalVisible(true);
+  };
+
+  const confirmLogout = () => {
+    setLogoutModalVisible(false);
+    logout();
+  };
 
   const menuItems = [
     { icon: <User size={22} color="#FFF" />, label: 'Personal Information', route: 'EditProfile' },
     { icon: <CreditCard size={22} color="#FFF" />, label: 'Payments & Payouts', route: 'Payments' },
     { icon: <Bell size={22} color="#FFF" />, label: 'Notifications', route: 'Notifications' },
     { icon: <Shield size={22} color="#FFF" />, label: 'Privacy & Security', route: 'Privacy' },
-    { icon: <Heart size={22} color="#FFF" />, label: 'My Favorites', route: 'Rentals' },
+    { icon: <Heart size={22} color="#FFF" />, label: 'My Favorites', route: 'Favorites' }, // Changed route to Favorites
     { icon: <Settings size={22} color="#FFF" />, label: 'Settings', route: 'Settings' },
   ];
 
@@ -54,12 +67,12 @@ const ProfileScreen = () => {
         {/* User Card */}
         <GlassCard contentStyle={styles.userCardContent}>
           <Image 
-            source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200' }} 
+            source={{ uri: user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200' }} 
             style={styles.avatar} 
           />
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>Shyam Kuntal</Text>
-            <Text style={styles.userEmail}>shyam.design@gmail.com</Text>
+            <Text style={styles.userName}>{user?.name || 'User'}</Text>
+            <Text style={styles.userEmail}>{user?.email || 'email@example.com'}</Text>
             <View style={styles.verifiedBadge}>
               <Text style={styles.verifiedText}>✓ Verified Member</Text>
             </View>
@@ -69,17 +82,17 @@ const ProfileScreen = () => {
         {/* Stats Row */}
         <GlassCard contentStyle={styles.statsContent}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>12</Text>
+            <Text style={styles.statValue}>{user?.rentalsCount || 0}</Text>
             <Text style={styles.statLabel}>Rentals</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>5</Text>
+            <Text style={styles.statValue}>{user?.listingsCount || 0}</Text>
             <Text style={styles.statLabel}>Listings</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>4.9</Text>
+            <Text style={styles.statValue}>{user?.rating || 'N/A'}</Text>
             <Text style={styles.statLabel}>Rating</Text>
           </View>
         </GlassCard>
@@ -91,12 +104,18 @@ const ProfileScreen = () => {
               key={index} 
               style={[styles.menuItem, index < menuItems.length - 1 && styles.menuItemBorder]}
               onPress={() => {
-                if (item.route === 'Rentals') {
-                  navigation.navigate('MainTabs', { screen: 'Bookings' });
+                if (item.route === 'Favorites') {
+                   // Navigate to favorites if implemented, for now log or use what's available
+                   // Assuming specific screen or params on HomeScreen
+                   // navigation.navigate('Favorites');
+                   Alert.alert('Coming Soon', 'Favorites screen is under construction');
                 } else if (item.route === 'Settings') {
                   navigation.navigate('Settings');
                 } else if (item.route === 'EditProfile') {
                   navigation.navigate('EditProfile');
+                } else {
+                   // Default fallback
+                   Alert.alert('Coming Soon', 'This feature is under development');
                 }
               }}
             >
@@ -108,13 +127,42 @@ const ProfileScreen = () => {
         </GlassCard>
 
         {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <LogOut size={22} color="#FF4545" />
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
         
         <View style={{height: 100}} />
       </ScrollView>
+
+      {/* Logout Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={logoutModalVisible}
+        onRequestClose={() => setLogoutModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <GlassView style={styles.modalContent} intensity={40} borderRadius={24}>
+            <View style={styles.centeredModalWrapper}>
+              <View style={styles.modalIconContainer}>
+                <LogOut size={32} color="#FF4545" style={{ marginLeft: 4 }} />
+              </View>
+              <Text style={styles.modalTitle}>Log Out?</Text>
+              <Text style={styles.modalDescription}>Are you sure you want to log out of your account?</Text>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setLogoutModalVisible(false)}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.deleteBtn} onPress={confirmLogout}>
+                  <Text style={styles.deleteText}>Log Out</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </GlassView>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -300,6 +348,88 @@ const styles = StyleSheet.create({
     color: '#FF4545',
     fontSize: 16,
     fontWeight: '600',
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 340,
+    padding: 24,
+  },
+  centeredModalWrapper: {
+    alignItems: 'center',
+    width: '100%',
+  },
+  modalIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255, 69, 69, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 69, 69, 0.3)',
+    alignSelf: 'center',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalDescription: {
+    fontSize: 15,
+    color: '#CCC',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginRight: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  deleteBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: '#FF4545',
+    marginLeft: 10,
+    alignItems: 'center',
+    shadowColor: '#FF4545',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  cancelText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  deleteText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 16,
   },
 });
 
