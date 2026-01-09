@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, D
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, Search, MapPin, Star, X } from 'lucide-react-native';
 import { items } from '../../data/items';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 50) / 2;
 
 const SearchScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [recentSearches] = useState(['Drone', 'Camera', 'Bike', 'Laptop']);
 
@@ -47,7 +49,7 @@ const SearchScreen = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FFF" />
         </TouchableOpacity>
@@ -116,7 +118,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 20,
     gap: 12,
   },

@@ -39,6 +39,9 @@ func HandleChatByID(w http.ResponseWriter, r *http.Request) {
 	if strings.HasSuffix(path, "/messages") {
 		chatID := strings.TrimSuffix(path, "/messages")
 		getMessages(w, r, chatID)
+	} else if strings.HasSuffix(path, "/read") {
+		chatID := strings.TrimSuffix(path, "/read")
+		markChatAsRead(w, r, chatID)
 	} else if r.Method == http.MethodDelete {
 		deleteChat(w, r, path)
 	}
@@ -73,11 +76,20 @@ func getChats(w http.ResponseWriter, r *http.Request) {
 
 	var populatedChats []PopulatedChat
 	for _, chat := range chats {
+		// Get last message first - skip chats with no messages
+		var lastMsg Message
+		err := msgCol.FindOne(ctx, bson.M{"chatId": chat.ID}, options.FindOne().SetSort(bson.D{{Key: "createdAt", Value: -1}})).Decode(&lastMsg)
+		if err != nil {
+			// No messages in this chat, skip it (don't show empty chats)
+			continue
+		}
+
 		pc := PopulatedChat{
 			ID:          chat.ID,
 			UnreadCount: chat.UnreadCount,
 			CreatedAt:   chat.CreatedAt,
 			UpdatedAt:   chat.UpdatedAt,
+			LastMessage: &lastMsg,
 		}
 
 		// Populate participants
@@ -94,13 +106,6 @@ func getChats(w http.ResponseWriter, r *http.Request) {
 			var item Item
 			itemCol.FindOne(ctx, bson.M{"_id": chat.ItemID}).Decode(&item)
 			pc.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price}
-		}
-
-		// Get last message
-		var lastMsg Message
-		err := msgCol.FindOne(ctx, bson.M{"chatId": chat.ID}, options.FindOne().SetSort(bson.D{{Key: "createdAt", Value: -1}})).Decode(&lastMsg)
-		if err == nil {
-			pc.LastMessage = &lastMsg
 		}
 
 		populatedChats = append(populatedChats, pc)
@@ -124,6 +129,23 @@ func createChat(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// Check if chat already exists for this item between these two users
+	var existingChat Chat
+	err := collection.FindOne(ctx, bson.M{
+		"itemId": itemID,
+		"participants": bson.M{
+			"$all":  []primitive.ObjectID{userID, participantID},
+			"$size": 2,
+		},
+	}).Decode(&existingChat)
+
+	if err == nil {
+		// Chat already exists, return it
+		JSON(w, http.StatusOK, map[string]interface{}{"chat": existingChat})
+		return
+	}
+
+	// Create new chat
 	chat := Chat{
 		ID:           primitive.NewObjectID(),
 		Participants: []primitive.ObjectID{userID, participantID},
@@ -225,4 +247,35 @@ func getUnreadCount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	JSON(w, http.StatusOK, map[string]int{"count": totalUnread})
+}
+
+func markChatAsRead(w http.ResponseWriter, r *http.Request, chatID string) {
+	if r.Method != http.MethodPut && r.Method != http.MethodPost {
+		JSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	userID, _ := GetUserID(r)
+	chatObjID, err := primitive.ObjectIDFromHex(chatID)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, "Invalid chat ID")
+		return
+	}
+
+	collection := GetCollection("chats")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Reset unread count for this user
+	key := "unreadCount." + userID.Hex()
+	_, err = collection.UpdateOne(ctx, bson.M{"_id": chatObjID, "participants": userID}, bson.M{
+		"$set": bson.M{key: 0},
+	})
+
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, "Failed to mark as read")
+		return
+	}
+
+	JSON(w, http.StatusOK, map[string]string{"message": "Marked as read"})
 }

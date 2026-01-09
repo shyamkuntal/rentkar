@@ -6,9 +6,11 @@ import { BlurView } from '@react-native-community/blur';
 import LinearGradient from 'react-native-linear-gradient';
 import { createItem } from '../../services/itemService';
 import GlassView from '../../components/GlassView';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AddItemScreen = () => {
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [successModalVisible, setSuccessModalVisible] = useState(false);
@@ -269,7 +271,7 @@ const AddItemScreen = () => {
             />
 
             {/* Header */}
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
                 <TouchableOpacity onPress={handleBack} style={styles.backButton}>
                     <ChevronLeft size={24} color="#FFF" />
                 </TouchableOpacity>
@@ -341,7 +343,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingTop: 60,
         paddingHorizontal: 20,
         paddingBottom: 20
     },

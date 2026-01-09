@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, Moon, Bell, Lock, Globe, HelpCircle, Info, ChevronRight } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SettingsScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [darkMode, setDarkMode] = useState(true);
   const [notifications, setNotifications] = useState(true);
 
@@ -19,7 +21,7 @@ const SettingsScreen = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FFF" />
         </TouchableOpacity>
@@ -68,7 +70,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 20,
   },
   backButton: {

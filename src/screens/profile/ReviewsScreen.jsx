@@ -5,11 +5,13 @@ import { ChevronLeft, Star } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { getItemReviews, getUserReviews } from '../../services/reviewService';
 import GlassView from '../../components/GlassView';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ReviewsScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { entityId, entityType, title } = route.params || {};
+  const insets = useSafeAreaInsets();
 
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +84,7 @@ const ReviewsScreen = () => {
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FFF" />
         </TouchableOpacity>
@@ -135,7 +137,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
   },

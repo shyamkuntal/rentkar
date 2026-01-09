@@ -22,10 +22,12 @@ import {
   Share2,
   Star
 } from 'lucide-react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { createChat } from '../../services/chatService';
 import { checkFavorite, addFavorite, removeFavorite } from '../../services/favoriteService';
 import { getItemReviews } from '../../services/reviewService';
 import { AuthContext } from '../../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const colors = {
   primary: '#FF5A5F',
@@ -44,6 +46,7 @@ const ProductDetailsScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { user } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
 
   const hideProfileLink = route.params?.hideProfileLink;
   const hideRentOption = route.params?.hideRentOption;
@@ -147,24 +150,7 @@ const ProductDetailsScreen = () => {
           <Image source={{ uri: product.images && product.images.length > 0 ? product.images[0] : (product.image || 'https://via.placeholder.com/400') }} style={styles.image} resizeMode="cover" />
           <View style={styles.imageOverlay} />
 
-          <View style={styles.headerSafeArea}>
-            <View style={styles.headerButtons}>
-              <TouchableOpacity
-                style={styles.roundButton}
-                onPress={() => navigation.goBack()}
-              >
-                <ChevronLeft size={24} color="#FFF" />
-              </TouchableOpacity>
-              <View style={styles.headerRightButtons}>
-                <TouchableOpacity style={[styles.roundButton, styles.marginRight]}>
-                  <Share2 size={22} color="#FFF" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.roundButton}>
-                  <Heart size={22} color="#FFF" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
+
         </View>
 
         {/* Main Content Body */}
@@ -259,6 +245,30 @@ const ProductDetailsScreen = () => {
         </View>
       </ScrollView>
 
+      {/* Fixed Header with Gradient */}
+      <View style={[styles.headerSafeArea, { height: insets.top + 60 }]}>
+        <LinearGradient
+          colors={['rgba(0,0,0,0.7)', 'transparent']}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={[styles.headerButtons, { paddingTop: insets.top }]}>
+          <TouchableOpacity
+            style={styles.roundButton}
+            onPress={() => navigation.goBack()}
+          >
+            <ChevronLeft size={24} color="#FFF" />
+          </TouchableOpacity>
+          <View style={styles.headerRightButtons}>
+            <TouchableOpacity style={[styles.roundButton, styles.marginRight]}>
+              <Share2 size={22} color="#FFF" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.roundButton}>
+              <Heart size={22} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
       {/* Floating Glass Action Bar */}
       {/* Floating Glass Action Bar - Only show if at least one option is available and NOT owner */}
       {(!hideRentOption || !hideChatOption) && !isOwner && (
@@ -331,7 +341,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 40 : 10,
+    paddingTop: 10, // Will be overridden by inline style
   },
   headerRightButtons: {
     flexDirection: 'row',

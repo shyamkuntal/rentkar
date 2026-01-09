@@ -1,17 +1,19 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, ActivityIndicator, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft, Send, Paperclip, MoreVertical, Trash2, Ban, Flag, X } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { BlurView } from '@react-native-community/blur';
-import { getMessages, deleteChat } from '../../services/chatService';
+import { getMessages, deleteChat, markAsRead } from '../../services/chatService';
 import { blockUser, reportEntity } from '../../services/blockService';
 import socketService from '../../services/socketService';
 import { AuthContext } from '../../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ChatScreen = () => {
     const navigation = useNavigation();
     const route = useRoute();
+    const insets = useSafeAreaInsets();
     const { chatId, recipientId, recipientName, recipientAvatar, product } = route.params || {};
     const { user } = useContext(AuthContext);
 
@@ -38,6 +40,8 @@ const ChatScreen = () => {
             const response = await getMessages(chatId);
             setMessages(response.messages || []);
             setLoading(false);
+            // Mark chat as read when opened
+            await markAsRead(chatId);
         } catch (error) {
             console.error('Error loading messages:', error);
             setLoading(false);
@@ -46,11 +50,9 @@ const ChatScreen = () => {
 
     const initializeSocket = async () => {
         try {
-            // Ensure WebSocket is connected before joining chat
             if (!socketService.isConnected()) {
                 await socketService.connect();
             }
-            // Join chat room and listen for messages
             socketService.joinChat(chatId);
             socketService.onMessage(handleNewMessage);
         } catch (error) {
@@ -62,34 +64,97 @@ const ChatScreen = () => {
         setMessages(prev => [...prev, newMessage]);
     };
 
-    const sendMessage = () => {
+    const sendMessageHandler = () => {
         if (message.trim().length > 0) {
             socketService.sendMessage(chatId, message.trim());
             setMessage('');
-            // Optimistic update handled by socket echo or wait for echo?
-            // Our backend broadcasts to sender too, so we can wait for echo. 
-            // But for better UX, we might want to append immediately.
-            // However, duplication might occur if we append here AND listen to socket.
-            // Backend broadcast sends to ALL clients in room.
-            // If we append here, we should ignore the socket event for our own ID, OR just trust socket latency (usually fast).
-            // Let's trust socket callback for now to avoid duplications without temp IDs.
         }
     };
 
+    const handleDeleteChat = async () => {
+        setMenuVisible(false);
+        Alert.alert(
+            'Delete Chat',
+            'Are you sure you want to delete this conversation?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteChat(chatId);
+                            navigation.goBack();
+                        } catch (error) {
+                            console.error('Error deleting chat:', error);
+                            Alert.alert('Error', 'Failed to delete chat');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleBlockUser = async () => {
+        setMenuVisible(false);
+        Alert.alert(
+            'Block User',
+            `Are you sure you want to block ${recipientName}?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Block',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await blockUser(recipientId);
+                            Alert.alert('Blocked', `${recipientName} has been blocked`);
+                            navigation.goBack();
+                        } catch (error) {
+                            console.error('Error blocking user:', error);
+                            Alert.alert('Error', 'Failed to block user');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleReportUser = async () => {
+        setMenuVisible(false);
+        Alert.alert(
+            'Report User',
+            `Report ${recipientName} for spam or inappropriate behavior?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Report',
+                    onPress: async () => {
+                        try {
+                            await reportEntity(recipientId, 'user', 'spam');
+                            Alert.alert('Reported', 'Thank you for your report. We will review it shortly.');
+                        } catch (error) {
+                            console.error('Error reporting user:', error);
+                            Alert.alert('Error', 'Failed to report user');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     const renderItem = ({ item }) => {
-        const isMe = item.senderId === user?.id; // Backend uses senderId
+        const isMe = item.senderId === user?.id;
         const time = new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         return (
             <View style={[styles.messageBubble, isMe ? styles.myMessage : styles.theirMessage]}>
-                {/* Glass effect for message bubbles */}
                 {!isMe && (
                     <View style={StyleSheet.absoluteFill}>
                         <View style={styles.bubbleGlassTint} />
                         <View style={styles.bubbleBorder} />
                     </View>
                 )}
-
                 <Text style={[styles.messageText, isMe ? styles.myText : styles.theirText]}>{item.content}</Text>
                 <Text style={[styles.timeText, isMe ? styles.myTime : styles.theirTime]}>{time}</Text>
             </View>
@@ -97,14 +162,18 @@ const ChatScreen = () => {
     };
 
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={0}
+        >
             <LinearGradient
                 colors={['#2B2D42', '#1A1A2E', '#16161E']}
                 style={StyleSheet.absoluteFill}
             />
 
             {/* Header */}
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
                 <View style={styles.glassBackground}>
                     {Platform.OS === 'ios' ? (
                         <BlurView blurType="dark" blurAmount={20} style={StyleSheet.absoluteFill} />
@@ -139,7 +208,7 @@ const ChatScreen = () => {
                 {menuVisible && (
                     <TouchableWithoutFeedback onPress={() => setMenuVisible(false)}>
                         <View style={styles.menuOverlay}>
-                             <View style={styles.menuContainer}>
+                            <View style={styles.menuContainer}>
                                 <TouchableOpacity style={styles.menuItem} onPress={handleDeleteChat}>
                                     <Trash2 size={18} color="#FF5A5F" />
                                     <Text style={styles.menuText}>Delete Chat</Text>
@@ -150,13 +219,13 @@ const ChatScreen = () => {
                                 </TouchableOpacity>
                                 <TouchableOpacity style={styles.menuItem} onPress={handleReportUser}>
                                     <Flag size={18} color="#FFF" />
-                                    <Text style={[styles.menuText, {color:'#FFF'}]}>Report Spam</Text>
+                                    <Text style={[styles.menuText, { color: '#FFF' }]}>Report Spam</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={[styles.menuItem, {borderBottomWidth:0}]} onPress={() => setMenuVisible(false)}>
+                                <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0 }]} onPress={() => setMenuVisible(false)}>
                                     <X size={18} color="#888" />
-                                    <Text style={[styles.menuText, {color:'#888'}]}>Close</Text>
+                                    <Text style={[styles.menuText, { color: '#888' }]}>Close</Text>
                                 </TouchableOpacity>
-                             </View>
+                            </View>
                         </View>
                     </TouchableWithoutFeedback>
                 )}
@@ -167,7 +236,7 @@ const ChatScreen = () => {
                 <TouchableOpacity
                     style={styles.productBanner}
                     activeOpacity={0.9}
-                    disabled={true} // Disable navigation to avoid loop or simplify
+                    disabled={true}
                 >
                     <View style={styles.productGlass} />
                     <Image
@@ -181,7 +250,8 @@ const ChatScreen = () => {
                 </TouchableOpacity>
             )}
 
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            {/* Chat Messages */}
+            <View style={styles.chatContainer}>
                 {loading ? (
                     <ActivityIndicator size="large" color="#FF5A5F" style={{ flex: 1 }} />
                 ) : (
@@ -191,51 +261,52 @@ const ChatScreen = () => {
                         renderItem={renderItem}
                         keyExtractor={item => item.id}
                         contentContainerStyle={styles.chatContent}
-                        keyboardDismissMode="on-drag"
+                        keyboardDismissMode="interactive"
                         showsVerticalScrollIndicator={false}
                         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
                         onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                <Text style={styles.emptyText}>No messages yet</Text>
+                                <Text style={styles.emptySubtext}>Start the conversation!</Text>
+                            </View>
+                        }
                     />
                 )}
-            </TouchableWithoutFeedback>
+            </View>
 
             {/* Input Area */}
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-                style={styles.keyboardAvoid}
-            >
-                <View style={styles.inputContainer}>
-                    <View style={styles.inputGlassBackground}>
-                        {Platform.OS === 'ios' && <BlurView blurType="dark" blurAmount={20} style={StyleSheet.absoluteFill} />}
-                        <View style={styles.inputBorder} />
-                    </View>
-
-                    <TouchableOpacity style={styles.attachButton}>
-                        <Paperclip size={22} color="#888" />
-                    </TouchableOpacity>
-
-                    <View style={styles.textInputWrapper}>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="Type a message..."
-                            placeholderTextColor="#666"
-                            value={message}
-                            onChangeText={setMessage}
-                            multiline
-                        />
-                    </View>
-
-                    <TouchableOpacity
-                        style={[styles.sendButton, message.trim().length > 0 && styles.sendButtonActive]}
-                        onPress={sendMessage}
-                        disabled={message.trim().length === 0}
-                    >
-                        <Send size={20} color="#FFF" />
-                    </TouchableOpacity>
+            <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+                <View style={styles.inputGlassBackground}>
+                    {Platform.OS === 'ios' && <BlurView blurType="dark" blurAmount={20} style={StyleSheet.absoluteFill} />}
+                    <View style={styles.inputBorder} />
                 </View>
-            </KeyboardAvoidingView>
-        </View>
+
+                <TouchableOpacity style={styles.attachButton}>
+                    <Paperclip size={22} color="#888" />
+                </TouchableOpacity>
+
+                <View style={styles.textInputWrapper}>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Type a message..."
+                        placeholderTextColor="#666"
+                        value={message}
+                        onChangeText={setMessage}
+                        multiline
+                        maxLength={1000}
+                    />
+                </View>
+
+                <TouchableOpacity
+                    style={[styles.sendButton, message.trim().length > 0 && styles.sendButtonActive]}
+                    onPress={sendMessageHandler}
+                    disabled={message.trim().length === 0}
+                >
+                    <Send size={20} color="#FFF" />
+                </TouchableOpacity>
+            </View>
+        </KeyboardAvoidingView>
     );
 };
 
@@ -244,7 +315,6 @@ const styles = StyleSheet.create({
 
     // Header
     header: {
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
         paddingBottom: 15,
         zIndex: 100,
     },
@@ -301,7 +371,8 @@ const styles = StyleSheet.create({
     perTime: { color: '#888', fontSize: 11, fontWeight: '400' },
 
     // Chat Area
-    chatContent: { padding: 20, paddingBottom: 20 },
+    chatContainer: { flex: 1 },
+    chatContent: { padding: 20, paddingBottom: 20, flexGrow: 1 },
     messageBubble: {
         maxWidth: '80%',
         padding: 12,
@@ -338,15 +409,29 @@ const styles = StyleSheet.create({
     myTime: { color: 'rgba(255,255,255,0.7)' },
     theirTime: { color: '#888' },
 
-    // Input Area
-    keyboardAvoid: {
-        // flex: 1, // Do not set flex 1 here, let it just wrap content
+    // Empty state
+    emptyContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingTop: 100,
     },
+    emptyText: {
+        color: '#FFF',
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+    emptySubtext: {
+        color: '#888',
+        fontSize: 14,
+    },
+
+    // Input Area
     inputContainer: {
         flexDirection: 'row',
         alignItems: 'flex-end',
         padding: 12,
-        paddingBottom: Platform.OS === 'ios' ? 24 : 12,
     },
     inputGlassBackground: {
         ...StyleSheet.absoluteFillObject,
@@ -390,7 +475,7 @@ const styles = StyleSheet.create({
     sendButtonActive: {
         backgroundColor: '#FF5A5F',
     },
-    
+
     menuOverlay: {
         position: 'absolute',
         top: 0,
@@ -401,7 +486,7 @@ const styles = StyleSheet.create({
     },
     menuContainer: {
         position: 'absolute',
-        top: Platform.OS === 'ios' ? 100 : 80,
+        top: 80,
         right: 20,
         backgroundColor: '#25252A',
         borderRadius: 16,

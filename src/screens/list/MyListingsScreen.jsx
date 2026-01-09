@@ -8,11 +8,13 @@ import LinearGradient from 'react-native-linear-gradient';
 import { getMyListings, deleteItem, updateItem } from '../../services/itemService';
 import { getItemReviews } from '../../services/reviewService';
 import { Star } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
 const MyListingsScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [selectedAdId, setSelectedAdId] = useState(null);
@@ -176,7 +178,7 @@ const MyListingsScreen = () => {
         colors={['#2B2D42', '#1A1A2E', '#16161E']}
         style={StyleSheet.absoluteFill}
       />
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Text style={styles.headerTitle}>My Ads</Text>
       </View>
 
@@ -322,7 +324,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 60,
+    paddingHorizontal: 24,
     paddingHorizontal: 20,
     paddingBottom: 20,
   },

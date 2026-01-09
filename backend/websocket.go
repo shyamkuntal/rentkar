@@ -226,6 +226,7 @@ func saveAndBroadcastMessage(client *Client, chatID, content string) {
 	}
 
 	collection := GetCollection("messages")
+	chatCollection := GetCollection("chats")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -243,8 +244,27 @@ func saveAndBroadcastMessage(client *Client, chatID, content string) {
 		return
 	}
 
-	// Update chat's updatedAt
-	GetCollection("chats").UpdateOne(ctx, bson.M{"_id": chatObjID}, bson.M{"$set": bson.M{"updatedAt": time.Now()}})
+	// Get chat to find participants
+	var chat Chat
+	if err := chatCollection.FindOne(ctx, bson.M{"_id": chatObjID}).Decode(&chat); err != nil {
+		log.Printf("Error finding chat: %v", err)
+		return
+	}
+
+	// Update chat's updatedAt and increment unread count for all participants except sender
+	updateFields := bson.M{"updatedAt": time.Now()}
+	for _, participantID := range chat.Participants {
+		if participantID != client.UserID {
+			// Increment unread count for this participant
+			key := "unreadCount." + participantID.Hex()
+			chatCollection.UpdateOne(ctx, bson.M{"_id": chatObjID}, bson.M{
+				"$set": updateFields,
+				"$inc": bson.M{key: 1},
+			})
+		}
+	}
+	// Also update updatedAt in case no other participants (shouldn't happen but just in case)
+	chatCollection.UpdateOne(ctx, bson.M{"_id": chatObjID}, bson.M{"$set": updateFields})
 
 	// Broadcast to room
 	responseData, _ := json.Marshal(map[string]interface{}{

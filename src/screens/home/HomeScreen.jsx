@@ -8,6 +8,7 @@ import ItemCard from '../../components/ItemCard';
 import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
 import { Laptop, Car, Building2, Shirt, Dumbbell, Search, Filter, User, MapPin, Home as HomeIcon } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Icon map outside component to ensure stability
 const CATEGORY_ICONS = {
@@ -50,6 +51,7 @@ CategoryBadge.displayName = 'CategoryBadge';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -123,7 +125,7 @@ const HomeScreen = () => {
       />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerTop}>
           <View>
             <Text style={styles.brandName}>
@@ -255,7 +257,6 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 16,
   },

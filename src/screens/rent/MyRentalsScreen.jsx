@@ -7,10 +7,12 @@ import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
 import { AuthContext } from '../../context/AuthContext';
 import { getMyBookings, getOwnerBookings, getPendingRequestsCount } from '../../services/bookingService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const MyRentalsScreen = () => {
   const navigation = useNavigation();
   const { user } = useContext(AuthContext); // Get current user
+  const insets = useSafeAreaInsets();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -75,15 +77,15 @@ const MyRentalsScreen = () => {
     const now = new Date();
     const endDate = new Date(booking.endDate);
     const startDate = new Date(booking.startDate);
-    
+
     if (booking.status === 'rejected' || booking.status === 'cancelled') {
       return booking.status;
     }
-    
+
     if (booking.status === 'completed') {
       return 'completed';
     }
-    
+
     if (booking.status === 'confirmed') {
       if (endDate < now) {
         return 'expired'; // Past end date
@@ -93,14 +95,14 @@ const MyRentalsScreen = () => {
         return 'confirmed'; // Future booking
       }
     }
-    
+
     if (booking.status === 'pending') {
       if (startDate < now) {
         return 'expired'; // Pending but start date passed
       }
       return 'pending';
     }
-    
+
     return booking.status;
   };
 
@@ -109,7 +111,7 @@ const MyRentalsScreen = () => {
       case 'confirmed': return styles.statusConfirmed;
       case 'ongoing': return styles.statusOngoing;
       case 'completed': return styles.statusCompleted;
-      case 'cancelled': 
+      case 'cancelled':
       case 'rejected': return styles.statusCancelled;
       case 'expired': return styles.statusExpired;
       default: return styles.statusPending;
@@ -135,7 +137,7 @@ const MyRentalsScreen = () => {
     const startDate = formatDate(item.startDate);
     const endDate = formatDate(item.endDate);
     const imageUri = product.images && product.images.length > 0 ? product.images[0] : (product.image || 'https://via.placeholder.com/100');
-    
+
     const displayStatus = getDisplayStatus(item);
 
     return (
@@ -182,7 +184,7 @@ const MyRentalsScreen = () => {
         colors={['#2B2D42', '#1A1A2E', '#16161E']}
         style={StyleSheet.absoluteFill}
       />
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Text style={styles.headerTitle}>Bookings</Text>
       </View>
 
@@ -234,7 +236,7 @@ const MyRentalsScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1A1A1A' },
-  header: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 20 },
+  header: { paddingHorizontal: 20, paddingBottom: 20 },
   headerTitle: { fontSize: 28, fontWeight: '700', color: '#FFF' },
   listContent: { paddingHorizontal: 20, paddingBottom: 100 },
 

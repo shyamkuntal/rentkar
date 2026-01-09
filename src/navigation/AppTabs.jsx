@@ -18,6 +18,7 @@ import AddItemScreen from '../screens/list/AddItemScreen';
 import MyListingsScreen from '../screens/list/MyListingsScreen';
 import ChatListScreen from '../screens/chat/ChatListScreen';
 import { getPendingRequestsCount } from '../services/bookingService';
+import { getUnreadCount } from '../services/chatService';
 
 // Icons
 import { Home, Calendar, FolderOpen, MessageCircle, Plus } from 'lucide-react-native';
@@ -95,17 +96,22 @@ const LiquidGlassSwitcher = ({ state, descriptors, navigation }) => {
 
   // Pending requests count for Bookings badge - MUST be before early return
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
 
   useEffect(() => {
-    const fetchPendingCount = async () => {
+    const fetchCounts = async () => {
       try {
-        const response = await getPendingRequestsCount();
-        setPendingRequestsCount(response.count || 0);
+        const [pendingResponse, unreadResponse] = await Promise.all([
+          getPendingRequestsCount(),
+          getUnreadCount()
+        ]);
+        setPendingRequestsCount(pendingResponse.count || 0);
+        setUnreadChatCount(unreadResponse.count || 0);
       } catch (error) {
-        console.log('Error fetching pending count:', error);
+        console.log('Error fetching counts:', error);
       }
     };
-    fetchPendingCount();
+    fetchCounts();
   }, [state.index]);
 
   // Check if Post screen is active - hide tab bar
@@ -119,9 +125,6 @@ const LiquidGlassSwitcher = ({ state, descriptors, navigation }) => {
     const color = focused ? '#e1e1e1' : '#888';
     const size = 22;
     const strokeWidth = focused ? 2 : 1.5;
-
-    // Mock unread count - in real app connect to context/store
-    const unreadCount = routeName === 'Chats' ? 0 : 0;
 
     const icon = (() => {
       switch (routeName) {
@@ -146,9 +149,9 @@ const LiquidGlassSwitcher = ({ state, descriptors, navigation }) => {
             <Text style={styles.badgeText}>{pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}</Text>
           </View>
         )}
-        {routeName === 'Chats' && unreadCount > 0 && (
+        {routeName === 'Chats' && unreadChatCount > 0 && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+            <Text style={styles.badgeText}>{unreadChatCount > 9 ? '9+' : unreadChatCount}</Text>
           </View>
         )}
       </View>

@@ -5,11 +5,13 @@ import { ChevronLeft, Calendar, User, MapPin, Receipt, ArrowRight, CheckCircle, 
 import { createChat } from '../../services/chatService';
 import { createReview, getBookingReviews } from '../../services/reviewService';
 import { updateBookingStatus } from '../../services/bookingService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const BookingDetailScreen = () => {
     const navigation = useNavigation();
     const route = useRoute();
     const { booking, viewMode } = route.params;
+    const insets = useSafeAreaInsets();
 
     // Handle data structure differences (backend population vs simple object)
     const product = booking.item || booking.product || {};
@@ -266,7 +268,7 @@ const BookingDetailScreen = () => {
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <ChevronLeft size={24} color="#FFF" />
                 </TouchableOpacity>
@@ -765,7 +767,7 @@ const BookingDetailScreen = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#1A1A1A' },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 },
     headerTitle: { fontSize: 18, color: '#FFF', fontWeight: '600' },
     backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 20 },
     receiptButton: { padding: 8 },

@@ -6,11 +6,13 @@ import { ChevronRight, Settings, CreditCard, Bell, Shield, Heart, LogOut, User, 
 import LinearGradient from 'react-native-linear-gradient';
 import { AuthContext } from '../../context/AuthContext';
 import GlassView from '../../components/GlassView';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
   const { user, logout } = useContext(AuthContext);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const handleLogout = () => {
     setLogoutModalVisible(true);
@@ -60,7 +62,7 @@ const ProfileScreen = () => {
       />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Text style={styles.headerTitle}>Profile</Text>
       </View>
 
@@ -166,7 +168,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1A',
   },
   header: {
-    paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
   },

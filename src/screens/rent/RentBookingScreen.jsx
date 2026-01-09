@@ -5,10 +5,12 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft, Calendar as CalendarIcon, Clock, Info } from 'lucide-react-native';
 import { createBooking } from '../../services/bookingService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const RentBookingScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const insets = useSafeAreaInsets();
   
   const product = route.params?.product || { 
       title: 'Unknown Item', 
@@ -149,7 +151,7 @@ const RentBookingScreen = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FFF" />
         </TouchableOpacity>
@@ -330,7 +332,7 @@ const RentBookingScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1A1A1A' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 20 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20 },
   headerTitle: { color: '#FFF', fontSize: 18, fontWeight: '600' },
   backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 120 },

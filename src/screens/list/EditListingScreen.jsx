@@ -6,11 +6,13 @@ import { colors } from '../../theme/colors';
 import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
 import { updateItem } from '../../services/itemService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const EditListingScreen = () => {
     const navigation = useNavigation();
     const route = useRoute();
     const { listing } = route.params;
+    const insets = useSafeAreaInsets();
 
     // Data for Categories
     const categories = [
@@ -150,7 +152,7 @@ const EditListingScreen = () => {
                 style={StyleSheet.absoluteFill}
             />
 
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <ChevronLeft size={24} color="#FFF" />
                 </TouchableOpacity>
@@ -276,7 +278,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingTop: 60,
         paddingHorizontal: 20,
         paddingBottom: 20,
         backgroundColor: 'rgba(0,0,0,0.2)', // Slight bg for header

@@ -4,12 +4,15 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft, Edit2, Trash2, Eye, MapPin, Tag, Calendar, MoreHorizontal } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import GlassView from '../../components/GlassView';
+import LinearGradient from 'react-native-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
 const MyAdDetailScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const insets = useSafeAreaInsets();
   const { listing } = route.params;
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
@@ -29,9 +32,6 @@ const MyAdDetailScreen = () => {
         {/* Header Image */}
         <View style={styles.imageContainer}>
           <Image source={{ uri: listing.image }} style={styles.image} resizeMode="cover" />
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <ChevronLeft size={24} color="#FFF" />
-          </TouchableOpacity>
           <View style={styles.statusBadgeImg}>
             <Text style={styles.statusTextImg}>{listing.status === 'active' ? 'Active' : 'Rented'}</Text>
           </View>
@@ -75,6 +75,20 @@ const MyAdDetailScreen = () => {
           <View style={{height: 100}} />
         </View>
       </ScrollView>
+
+      {/* Fixed Header with Gradient */}
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: insets.top + 60, zIndex: 100 }}>
+        <LinearGradient
+          colors={['rgba(0,0,0,0.7)', 'transparent']}
+          style={StyleSheet.absoluteFill}
+        />
+        <TouchableOpacity 
+            style={[styles.backButton, { top: insets.top + 10 }]} 
+            onPress={() => navigation.goBack()}
+        >
+            <ChevronLeft size={24} color="#FFF" />
+        </TouchableOpacity>
+      </View>
 
       {/* Bottom Action Bar */}
       <View style={styles.bottomBar}>

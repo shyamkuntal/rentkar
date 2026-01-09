@@ -5,9 +5,11 @@ import { ChevronLeft, Camera, User, Mail, Phone, MapPin } from 'lucide-react-nat
 import LinearGradient from 'react-native-linear-gradient';
 import { AuthContext } from '../../context/AuthContext';
 import { updateProfile } from '../../services/userService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const EditProfileScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { user, refreshUser } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -41,12 +43,12 @@ const EditProfileScreen = () => {
         phone: formData.phone,
         location: formData.location,
       });
-      
+
       // Refresh user data in context
       if (refreshUser) {
         await refreshUser();
       }
-      
+
       Alert.alert('Success', 'Profile updated successfully', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
@@ -77,7 +79,7 @@ const EditProfileScreen = () => {
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FFF" />
         </TouchableOpacity>
@@ -95,9 +97,9 @@ const EditProfileScreen = () => {
         {/* Avatar Section */}
         <View style={styles.avatarSection}>
           <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
-            <Image 
-              source={{ uri: user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200' }} 
-              style={styles.avatar} 
+            <Image
+              source={{ uri: user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200' }}
+              style={styles.avatar}
             />
             <View style={styles.cameraButton}>
               <Camera size={18} color="#FFF" />
@@ -119,7 +121,7 @@ const EditProfileScreen = () => {
               <TextInput
                 style={styles.textInput}
                 value={formData.name}
-                onChangeText={(text) => setFormData({...formData, name: text})}
+                onChangeText={(text) => setFormData({ ...formData, name: text })}
                 placeholder="Enter your name"
                 placeholderTextColor="#666"
               />
@@ -155,7 +157,7 @@ const EditProfileScreen = () => {
               <TextInput
                 style={styles.textInput}
                 value={formData.phone}
-                onChangeText={(text) => setFormData({...formData, phone: text})}
+                onChangeText={(text) => setFormData({ ...formData, phone: text })}
                 keyboardType="phone-pad"
                 placeholder="Enter phone number"
                 placeholderTextColor="#666"
@@ -174,7 +176,7 @@ const EditProfileScreen = () => {
               <TextInput
                 style={styles.textInput}
                 value={formData.location}
-                onChangeText={(text) => setFormData({...formData, location: text})}
+                onChangeText={(text) => setFormData({ ...formData, location: text })}
                 placeholder="Enter your location"
                 placeholderTextColor="#666"
               />
@@ -201,7 +203,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 20,
   },
   backButton: {

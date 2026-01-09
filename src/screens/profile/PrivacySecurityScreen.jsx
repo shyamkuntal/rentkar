@@ -3,9 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Switch, Alert, Mo
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, Lock, Shield, Eye, Trash2, Key, ChevronRight } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const PrivacySecurityScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [profileVisible, setProfileVisible] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -77,7 +79,7 @@ const PrivacySecurityScreen = () => {
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FFF" />
         </TouchableOpacity>
@@ -255,7 +257,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 20,
   },
   backButton: {

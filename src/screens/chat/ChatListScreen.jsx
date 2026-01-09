@@ -7,10 +7,12 @@ import LinearGradient from 'react-native-linear-gradient';
 import { getChats } from '../../services/chatService';
 import socketService from '../../services/socketService';
 import { AuthContext } from '../../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ChatListScreen = () => {
   const navigation = useNavigation();
   const { user } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,7 +33,7 @@ const ChatListScreen = () => {
     useCallback(() => {
       loadChats();
       socketService.connect();
-      
+
       // Listen for new messages to update list order/content
       socketService.onMessage(() => {
         loadChats(); // Refresh list on new message
@@ -56,7 +58,7 @@ const ChatListScreen = () => {
   const renderChatItem = ({ item }) => {
     const otherUser = getOtherParticipant(item.participants);
     const lastMsgTime = item.lastMessage ? new Date(item.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-    
+
     // Fix: Access unread count from the map using user.id
     const unreadCount = (item.unreadCount && user?.id) ? (item.unreadCount[user.id] || 0) : 0;
 
@@ -74,9 +76,9 @@ const ChatListScreen = () => {
       >
         <GlassView style={styles.chatItem} borderRadius={20}>
           <View style={styles.chatContentRow}>
-            <Image 
-              source={{ uri: otherUser.avatar || 'https://via.placeholder.com/100' }} 
-              style={styles.avatar} 
+            <Image
+              source={{ uri: otherUser.avatar || 'https://via.placeholder.com/100' }}
+              style={styles.avatar}
             />
             <View style={styles.chatInfo}>
               <View style={styles.chatHeader}>
@@ -110,8 +112,8 @@ const ChatListScreen = () => {
         colors={['#2B2D42', '#1A1A2E', '#16161E']}
         style={StyleSheet.absoluteFill}
       />
-      
-      <View style={styles.header}>
+
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <Text style={styles.headerTitle}>Messages</Text>
       </View>
 
@@ -145,7 +147,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1A',
   },
   header: {
-    paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20,
   },

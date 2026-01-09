@@ -6,9 +6,11 @@ import { colors } from '../../theme/colors';
 import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
 import { getFavorites, removeFavorite } from '../../services/favoriteService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const FavoritesScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -85,7 +87,7 @@ const FavoritesScreen = () => {
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FFF" />
         </TouchableOpacity>
@@ -121,7 +123,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 20
   },

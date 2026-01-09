@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Dimensions }
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft, MapPin, Star } from 'lucide-react-native';
 import { items } from '../../data/items';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 50) / 2;
@@ -10,6 +11,7 @@ const CARD_WIDTH = (width - 50) / 2;
 const CategoryScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const insets = useSafeAreaInsets();
   const { category } = route.params || { category: { name: 'Electronics' } };
 
   // Filter items by category
@@ -41,7 +43,7 @@ const CategoryScreen = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FFF" />
         </TouchableOpacity>
@@ -77,7 +79,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 20,
   },
   backButton: {

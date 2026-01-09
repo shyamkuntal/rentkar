@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft, CreditCard, Check, Calendar, Clock } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CheckoutScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const insets = useSafeAreaInsets();
   const { product, dates, totalPrice } = route.params || {
     product: { title: 'Sample Product', price: 500, image: 'https://via.placeholder.com/100' },
     dates: { start: 'Jan 15', end: 'Jan 18' },
@@ -28,7 +30,7 @@ const CheckoutScreen = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FFF" />
         </TouchableOpacity>
@@ -131,7 +133,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 20,
   },
   backButton: {

@@ -4,11 +4,13 @@ import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, Bell, Mail, MessageSquare, Package, Gift } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const NOTIFICATIONS_STORAGE_KEY = '@notification_settings';
 
 const NotificationsScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [settings, setSettings] = useState({
     pushNotifications: true,
     emailNotifications: true,
@@ -89,7 +91,7 @@ const NotificationsScreen = () => {
         style={StyleSheet.absoluteFill}
       />
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FFF" />
         </TouchableOpacity>
@@ -143,7 +145,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
     paddingBottom: 20,
   },
   backButton: {

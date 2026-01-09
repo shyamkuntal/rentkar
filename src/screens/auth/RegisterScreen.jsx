@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingVi
 import { AuthContext } from '../../context/AuthContext';
 import { User, Mail, Lock, Phone, ArrowRight, ChevronLeft } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const RegisterScreen = () => {
   const navigation = useNavigation();
   const { register } = useContext(AuthContext);
+  const insets = useSafeAreaInsets();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -46,7 +48,7 @@ const RegisterScreen = () => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FFF" />
         </TouchableOpacity>
@@ -157,7 +159,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1A',
   },
   header: {
-    paddingTop: 60,
     paddingHorizontal: 20,
   },
   backButton: {
