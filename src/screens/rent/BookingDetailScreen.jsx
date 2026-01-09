@@ -4,6 +4,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { ChevronLeft, Calendar, User, MapPin, Receipt, ArrowRight, CheckCircle, XCircle, Star } from 'lucide-react-native';
 import { createChat } from '../../services/chatService';
 import { createReview, getBookingReviews } from '../../services/reviewService';
+import { updateBookingStatus } from '../../services/bookingService';
 
 const BookingDetailScreen = () => {
     const navigation = useNavigation();
@@ -44,20 +45,26 @@ const BookingDetailScreen = () => {
     const startTime = formatTime(booking.startDate);
     const endTime = formatTime(booking.endDate);
 
-    const [accepting, setAccepting] = React.useState(false);
-    const [modalVisible, setModalVisible] = React.useState(false);
-    const [modalType, setModalType] = React.useState(null); // 'success' or 'error'
-    const [modalMessage, setModalMessage] = React.useState('');
+    const [accepting, setAccepting] = useState(false);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [modalType, setModalType] = useState(null); // 'success' or 'error'
+    const [modalMessage, setModalMessage] = useState('');
     
     // Review modal state
-    const [reviewModalVisible, setReviewModalVisible] = React.useState(false);
-    const [reviewRating, setReviewRating] = React.useState(0);
-    const [reviewComment, setReviewComment] = React.useState('');
-    const [userRating, setUserRating] = React.useState(0);
-    const [userComment, setUserComment] = React.useState('');
-    const [reviewSubmitting, setReviewSubmitting] = React.useState(false);
+    const [reviewModalVisible, setReviewModalVisible] = useState(false);
+    const [reviewRating, setReviewRating] = useState(0);
+    const [reviewComment, setReviewComment] = useState('');
+    const [userRating, setUserRating] = useState(0);
+    const [userComment, setUserComment] = useState('');
+    const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
+    // Cancellation modal state
+    const [cancelModalVisible, setCancelModalVisible] = useState(false);
+    const [cancelReason, setCancelReason] = useState('');
+    const [cancelling, setCancelling] = useState(false);
 
     // Determine display status based on booking status and dates
+
     const getDisplayStatus = () => {
         const now = new Date();
         const bookingEndDate = new Date(booking.endDate);
@@ -94,7 +101,42 @@ const BookingDetailScreen = () => {
     const displayStatus = getDisplayStatus();
 
     const showAcceptance = isOwnerView && booking.status === 'pending' && displayStatus !== 'expired';
-    const canReview = !isOwnerView && (displayStatus === 'confirmed' || displayStatus === 'ongoing' || displayStatus === 'expired' || displayStatus === 'completed');
+    const canReview = !isOwnerView && (displayStatus === 'confirmed' || displayStatus === 'ongoing' || displayStatus === 'expired' || displayStatus === 'completed') && displayStatus !== 'cancelled';
+    const canCancel = (
+        displayStatus !== 'expired' && 
+        displayStatus !== 'completed' && 
+        displayStatus !== 'cancelled' && 
+        displayStatus !== 'rejected' &&
+        (isOwnerView 
+            ? booking.status === 'confirmed' 
+            : (booking.status === 'pending' || booking.status === 'confirmed')
+        )
+    );
+
+    const handleCancelBooking = async () => {
+        console.log('Cancel Reason:', cancelReason);
+        if (!cancelReason.trim()) {
+            Alert.alert('Reason Required', 'Please provide a reason for cancellation');
+            return;
+        }
+        
+        setCancelling(true);
+        try {
+            await updateBookingStatus(booking.id, 'cancelled', cancelReason);
+            setCancelModalVisible(false);
+            setModalType('success');
+            setModalMessage('Booking cancelled successfully');
+            setModalVisible(true);
+        } catch (error) {
+            console.error(error);
+            setCancelModalVisible(false);
+            setModalType('error');
+            setModalMessage(error.message || 'Failed to cancel booking');
+            setModalVisible(true);
+        } finally {
+            setCancelling(false);
+        }
+    };
 
     // Get the lender (owner) for user review
     const lender = booking.owner || product.owner || {};
@@ -157,7 +199,6 @@ const BookingDetailScreen = () => {
     const handleUpdateStatus = async (newStatus) => {
         setAccepting(true);
         try {
-            const { updateBookingStatus } = require('../../services/bookingService');
             await updateBookingStatus(booking.id, newStatus);
             setModalType(newStatus === 'confirmed' ? 'success' : 'rejected');
             setModalMessage(`Booking ${newStatus === 'confirmed' ? 'Accepted' : 'Rejected'} successfully!`);
@@ -177,10 +218,15 @@ const BookingDetailScreen = () => {
     };
 
     const handleItemPress = () => {
+        // Determine the correct owner (lender) to display
+        // If I am the owner (isOwnerView), then I am the owner.
+        // If I am the renter, then the booking owner is the owner.
+        const itemOwner = isOwnerView ? user : (booking.owner || product.owner || {});
+
         // Merge owner info into product for ItemDetailScreen
         const productWithOwner = {
             ...product,
-            owner: contactPerson,
+            owner: itemOwner,
         };
         navigation.navigate('ItemDetail', {
             product: productWithOwner,
@@ -227,7 +273,7 @@ const BookingDetailScreen = () => {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
                 {/* Status Banner */}
                 <View style={[
                     styles.statusBanner,
@@ -260,6 +306,19 @@ const BookingDetailScreen = () => {
                             : null
                     ]}>Reference ID: #{booking.trackingId || booking.id?.slice(-8).toUpperCase()}</Text>
                 </View>
+
+                {/* Cancellation Details */}
+                {(displayStatus === 'cancelled' || booking.status === 'cancelled') && (
+                    <View style={styles.cancellationCard}>
+                        <Text style={styles.cancellationTitle}>Cancellation Details</Text>
+                        <Text style={styles.cancellationText}>
+                            Cancelled by: <Text style={{fontWeight: 'bold'}}>{booking.cancelledBy === user?.id ? 'You' : (booking.cancelledBy === booking.ownerId ? 'Lender' : 'Renter')}</Text>
+                        </Text>
+                        {booking.cancellationReason && (
+                            <Text style={styles.cancellationText}>Reason: {booking.cancellationReason}</Text>
+                        )}
+                    </View>
+                )}
 
                 {/* Item Card - Clickable */}
                 <Text style={styles.sectionTitle}>Rented Item</Text>
@@ -407,6 +466,20 @@ const BookingDetailScreen = () => {
                             {accepting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.acceptText}>Accept Booking</Text>}
                         </TouchableOpacity>
                     </View>
+                )}
+
+                {/* Review Section - Show existing review or leave review button */}
+                {/* Cancel Booking Button */}
+                {canCancel && (
+                    <TouchableOpacity 
+                        style={styles.cancelBtn}
+                        onPress={() => {
+                            console.log("Cancel Booking Pressed");
+                            setCancelModalVisible(true);
+                        }}
+                    >
+                        <Text style={styles.cancelBtnText}>Cancel Booking</Text>
+                    </TouchableOpacity>
                 )}
 
                 {/* Review Section - Show existing review or leave review button */}
@@ -642,6 +715,47 @@ const BookingDetailScreen = () => {
                     </ScrollView>
                 </View>
             </Modal>
+            
+            {/* Cancel Booking Modal */}
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={cancelModalVisible}
+                onRequestClose={() => setCancelModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalBox}>
+                        <Text style={styles.modalTitle}>Cancel Booking</Text>
+                        <Text style={styles.modalDescription}>Are you sure you want to cancel this booking? This action cannot be undone.</Text>
+                        
+                        <TextInput
+                            style={styles.modalInput}
+                            placeholder="Reason for cancellation (required)"
+                            placeholderTextColor="#888"
+                            multiline
+                            numberOfLines={3}
+                            value={cancelReason}
+                            onChangeText={setCancelReason}
+                        />
+
+                        <TouchableOpacity 
+                            style={[styles.modalOkBtn, { backgroundColor: '#FF5A5F', marginTop: 16 }]} 
+                            onPress={handleCancelBooking}
+                            disabled={cancelling}
+                        >
+                            {cancelling ? <ActivityIndicator color="#FFF" /> : <Text style={styles.modalOkText}>Confirm Cancellation</Text>}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                            style={styles.modalCancelBtn} 
+                            onPress={() => setCancelModalVisible(false)}
+                            disabled={cancelling}
+                        >
+                            <Text style={styles.modalCancelText}>Go Back</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -717,6 +831,19 @@ const styles = StyleSheet.create({
     acceptBtn: { backgroundColor: '#5CD189' },
     rejectText: { color: '#FF5A5F', fontWeight: '600', fontSize: 16 },
     acceptText: { color: '#000', fontWeight: '700', fontSize: 16 },
+
+    acceptText: { color: '#000', fontWeight: '700', fontSize: 16 },
+
+    cancelBtn: { backgroundColor: 'rgba(255, 90, 95, 0.1)', borderWidth: 1, borderColor: '#FF5A5F', marginTop: 24, paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginBottom: 24 },
+    cancelBtnText: { color: '#FF5A5F', fontWeight: '600', fontSize: 16 },
+
+    cancellationCard: { backgroundColor: 'rgba(255, 90, 95, 0.1)', padding: 16, borderRadius: 12, marginBottom: 24, marginTop: -12, borderLeftWidth: 3, borderLeftColor: '#FF5A5F' },
+    cancellationTitle: { color: '#FFF', fontSize: 16, fontWeight: '600', marginBottom: 8 },
+    cancellationText: { color: '#ddd', fontSize: 14, lineHeight: 20 },
+    
+    modalInput: { backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: 12, borderRadius: 8, height: 100, textAlignVertical: 'top', marginTop: 12, width: '100%' },
+    modalCancelBtn: { marginTop: 16, padding: 10 },
+    modalCancelText: { color: '#888', fontSize: 14 },
 
     // Existing review styles
     existingReviewContainer: { marginTop: 16 },

@@ -184,7 +184,7 @@ const ProductDetailsScreen = () => {
             </View>
             <View style={styles.ratingBadge}>
               <Star size={14} color="#FFD700" fill="#FFD700" />
-              <Text style={styles.ratingText}> {product.rating} ({product.reviews} reviews)</Text>
+              <Text style={styles.ratingText}> {product.rating ? Number(product.rating).toFixed(1) : 'New'} ({product.reviews || 0} reviews)</Text>
             </View>
           </View>
 

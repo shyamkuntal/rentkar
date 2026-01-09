@@ -43,6 +43,13 @@ func getUser(w http.ResponseWriter, r *http.Request, id string) {
 			"rating":        user.Rating,
 			"totalRatings":  user.TotalRatings,
 			"totalListings": user.TotalListings,
+			"totalBookings": func() int64 {
+				count, _ := GetCollection("bookings").CountDocuments(ctx, bson.M{
+					"renterId": userID,
+					"status":   bson.M{"$in": []string{"confirmed", "ongoing", "completed", "expired"}},
+				})
+				return count
+			}(),
 		},
 	})
 }

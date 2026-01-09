@@ -17,8 +17,8 @@ export const createBooking = async (bookingData) => {
 };
 
 // Update booking status
-export const updateBookingStatus = async (id, status) => {
-  return await patch(API_ENDPOINTS.BOOKING_BY_ID(id), { status });
+export const updateBookingStatus = async (id, status, reason = null) => {
+  return await patch(API_ENDPOINTS.BOOKING_BY_ID(id), { status, reason });
 };
 
 // Get owner bookings (requests)

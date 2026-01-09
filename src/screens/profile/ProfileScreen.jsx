@@ -2,7 +2,7 @@ import React, { useContext, useState } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Platform, Alert, Modal } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from '@react-native-community/blur';
-import { ChevronRight, Settings, CreditCard, Bell, Shield, Heart, LogOut, User } from 'lucide-react-native';
+import { ChevronRight, Settings, CreditCard, Bell, Shield, Heart, LogOut, User, Star } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { AuthContext } from '../../context/AuthContext';
 import GlassView from '../../components/GlassView';
@@ -27,6 +27,7 @@ const ProfileScreen = () => {
     { icon: <Bell size={22} color="#FFF" />, label: 'Notifications', route: 'Notifications' },
     { icon: <Shield size={22} color="#FFF" />, label: 'Privacy & Security', route: 'PrivacySecurity' },
     { icon: <Heart size={22} color="#FFF" />, label: 'My Favorites', route: 'Favorites' },
+    { icon: <Star size={22} color="#FFF" />, label: 'Reviews', route: 'Reviews' },
     { icon: <Settings size={22} color="#FFF" />, label: 'Settings', route: 'Settings' },
   ];
 
@@ -82,7 +83,7 @@ const ProfileScreen = () => {
         {/* Stats Row */}
         <GlassCard contentStyle={styles.statsContent}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{user?.rentalsCount || 0}</Text>
+            <Text style={styles.statValue}>{user?.totalBookings || 0}</Text>
             <Text style={styles.statLabel}>Rentals</Text>
           </View>
           <View style={styles.divider} />
@@ -92,7 +93,7 @@ const ProfileScreen = () => {
           </View>
           <View style={styles.divider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{user?.rating || 'N/A'}</Text>
+            <Text style={styles.statValue}>{user?.rating ? user.rating.toFixed(1) : 'N/A'}<Text style={{fontSize: 14, color: '#888'}}> ({user?.totalRatings || 0})</Text></Text>
             <Text style={styles.statLabel}>Rating</Text>
           </View>
         </GlassCard>
@@ -106,6 +107,8 @@ const ProfileScreen = () => {
               onPress={() => {
                 if (item.route === 'Payments') {
                   Alert.alert('Coming Soon', 'Payments & Payouts feature is under development');
+                } else if (item.route === 'Reviews') {
+                  navigation.navigate('Reviews', { entityId: user?.id, entityType: 'user', title: 'My Reviews' });
                 } else {
                   navigation.navigate(item.route);
                 }

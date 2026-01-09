@@ -2,6 +2,7 @@ package backend
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"strings"
@@ -207,7 +208,7 @@ func getMyBookings(w http.ResponseWriter, r *http.Request) {
 		// Populate item
 		var item Item
 		if err := itemCol.FindOne(ctx, bson.M{"_id": b.ItemID}).Decode(&item); err == nil {
-			pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category, Location: item.Location}
+			pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category, Location: item.Location, Description: item.Description}
 		}
 
 		// Populate owner
@@ -281,7 +282,7 @@ func getOwnerBookings(w http.ResponseWriter, r *http.Request) {
 		// Populate item
 		var item Item
 		if err := itemCol.FindOne(ctx, bson.M{"_id": b.ItemID}).Decode(&item); err == nil {
-			pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category, Location: item.Location}
+			pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category, Location: item.Location, Description: item.Description}
 		}
 
 		// Populate renter
@@ -353,7 +354,7 @@ func getBooking(w http.ResponseWriter, r *http.Request, id string) {
 
 	var item Item
 	if err := itemCol.FindOne(ctx, bson.M{"_id": booking.ItemID}).Decode(&item); err == nil {
-		pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category, Location: item.Location}
+		pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category, Location: item.Location, Description: item.Description}
 	}
 
 	var owner User
@@ -370,16 +371,86 @@ func getBooking(w http.ResponseWriter, r *http.Request, id string) {
 }
 
 func updateBookingStatus(w http.ResponseWriter, r *http.Request, id string) {
-	bookingID, _ := primitive.ObjectIDFromHex(id)
+	bookingID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, "Invalid booking ID")
+		return
+	}
+
 	var req struct {
 		Status string `json:"status"`
+		Reason string `json:"reason"`
 	}
 	DecodeJSON(r, &req)
 
+	userID, _ := GetUserID(r)
 	collection := GetCollection("bookings")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	collection.UpdateOne(ctx, bson.M{"_id": bookingID}, bson.M{"$set": bson.M{"status": req.Status, "updatedAt": time.Now()}})
+	// Get current booking to verify permissions
+	var booking Booking
+	if err := collection.FindOne(ctx, bson.M{"_id": bookingID}).Decode(&booking); err != nil {
+		JSONError(w, http.StatusNotFound, "Booking not found")
+		return
+	}
+
+	update := bson.M{}
+
+	if req.Status == "cancelled" {
+		// Both Owner and Renter can cancel
+		if booking.OwnerID != userID && booking.RenterID != userID {
+			JSONError(w, http.StatusForbidden, "Not authorized to cancel this booking")
+			return
+		}
+		
+		// Only allow cancelling properly (pending or confirmed)
+		if booking.Status == "completed" || booking.Status == "rejected" || booking.Status == "cancelled" {
+			JSONError(w, http.StatusBadRequest, "Cannot cancel a booking that is "+booking.Status)
+			return
+		}
+
+		update = bson.M{
+			"$set": bson.M{
+				"status":             "cancelled",
+				"updatedAt":          time.Now(),
+				"cancelledBy":        userID,
+				"cancellationReason": req.Reason,
+			},
+		}
+
+	} else if req.Status == "confirmed" || req.Status == "rejected" {
+		// Only Owner can confirm or reject
+		if booking.OwnerID != userID {
+			JSONError(w, http.StatusForbidden, "Only the owner can update status")
+			return
+		}
+		update = bson.M{
+			"$set": bson.M{
+				"status":    req.Status,
+				"updatedAt": time.Now(),
+			},
+		}
+	} else {
+		JSONError(w, http.StatusBadRequest, "Invalid status")
+		return
+	}
+
+	_, err = collection.UpdateOne(ctx, bson.M{"_id": bookingID}, update)
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, "Failed to update booking")
+		return
+	}
+
+	// If confirmed, increment Renter's TotalBookings
+	if req.Status == "confirmed" {
+		userCol := GetCollection("users")
+		_, err = userCol.UpdateOne(ctx, bson.M{"_id": booking.RenterID}, bson.M{"$inc": bson.M{"totalBookings": 1}})
+		if err != nil {
+			// Log error but don't fail the request
+			fmt.Println("Error incrementing totalBookings:", err)
+		}
+	}
+
 	JSON(w, http.StatusOK, map[string]string{"message": "Booking updated"})
 }

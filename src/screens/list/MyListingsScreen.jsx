@@ -6,6 +6,8 @@ import { colors } from '../../theme/colors';
 import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
 import { getMyListings, deleteItem, updateItem } from '../../services/itemService';
+import { getItemReviews } from '../../services/reviewService';
+import { Star } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -16,7 +18,11 @@ const MyListingsScreen = () => {
   const [selectedAdId, setSelectedAdId] = useState(null);
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
+
   const [refreshing, setRefreshing] = useState(false);
+  const [reviewsModalVisible, setReviewsModalVisible] = useState(false);
+  const [selectedItemReviews, setSelectedItemReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   const loadListings = async () => {
     try {
@@ -66,12 +72,27 @@ const MyListingsScreen = () => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     try {
       await updateItem(itemId, { status: newStatus });
-      setListings(prev => prev.map(item => 
+      setListings(prev => prev.map(item =>
         item.id === itemId ? { ...item, status: newStatus } : item
       ));
     } catch (error) {
       console.error('Error toggling status:', error);
       Alert.alert('Error', 'Failed to update listing status');
+    }
+
+  };
+
+  const handleViewReviews = async (itemId) => {
+    setReviewsLoading(true);
+    setReviewsModalVisible(true);
+    setSelectedItemReviews([]);
+    try {
+      const response = await getItemReviews(itemId);
+      setSelectedItemReviews(response.reviews || []);
+    } catch (error) {
+      console.error("Error fetching reviews", error);
+    } finally {
+      setReviewsLoading(false);
     }
   };
 
@@ -98,7 +119,14 @@ const MyListingsScreen = () => {
               <Eye size={14} color="#888" />
               <Text style={styles.statText}>{item.views || 0} Views</Text>
             </View>
+            {item.rating > 0 && (
+              <View style={[styles.stat, { marginLeft: 12 }]}>
+                <Star size={12} color="#FFD700" fill="#FFD700" />
+                <Text style={[styles.statText, { color: '#FFD700' }]}>{item.rating.toFixed(1)} ({item.reviews || 0})</Text>
+              </View>
+            )}
             <View style={styles.toggleContainer}>
+
               <Text style={styles.toggleLabel}>
                 {item.status === 'active' ? 'Active' : 'Inactive'}
               </Text>
@@ -114,6 +142,14 @@ const MyListingsScreen = () => {
           <View style={styles.divider} />
 
           <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => handleViewReviews(item.id)}
+            >
+              <Eye size={16} color="#4CAF50" />
+              <Text style={[styles.actionText, { color: '#4CAF50' }]}>Reviews</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.actionBtn}
               onPress={() => navigation.navigate('EditListing', { listing: item })}
@@ -209,6 +245,66 @@ const MyListingsScreen = () => {
               <TouchableOpacity style={styles.successBtn} onPress={() => setSuccessModalVisible(false)}>
                 <Text style={styles.successBtnText}>OK</Text>
               </TouchableOpacity>
+            </View>
+          </GlassView>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={reviewsModalVisible}
+        onRequestClose={() => setReviewsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <GlassView style={[styles.modalContent, { height: '80%', maxWidth: '100%' }]} intensity={40} borderRadius={24}>
+            <View style={{ flex: 1 }}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Item Reviews</Text>
+                <TouchableOpacity onPress={() => setReviewsModalVisible(false)} style={styles.closeBtn}>
+                  <Text style={styles.closeBtnText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+
+              {reviewsLoading ? (
+                <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+              ) : (
+                <FlatList
+                  data={selectedItemReviews}
+                  keyExtractor={(item) => item.id}
+                  contentContainerStyle={{ padding: 16 }}
+                  ListEmptyComponent={
+                    <Text style={styles.emptyText}>No reviews yet.</Text>
+                  }
+                  renderItem={({ item }) => (
+                    <View style={styles.reviewCard}>
+                      <View style={styles.reviewHeader}>
+                        <Image
+                          source={{ uri: item.reviewer?.avatar || 'https://via.placeholder.com/40' }}
+                          style={styles.reviewerAvatar}
+                        />
+                        <View style={styles.reviewerInfo}>
+                          <Text style={styles.reviewerName}>{item.reviewer?.name || 'Anonymous'}</Text>
+                          <View style={styles.starRow}>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                size={12}
+                                color="#FFD700"
+                                fill={star <= item.rating ? "#FFD700" : "transparent"}
+                              />
+                            ))}
+                          </View>
+                        </View>
+                        <Text style={styles.reviewDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+                      </View>
+                      {item.comment && (
+                        <Text style={styles.reviewComment}>{item.comment}</Text>
+                      )}
+                    </View>
+                  )}
+                />
+              )}
             </View>
           </GlassView>
         </View>
@@ -455,6 +551,59 @@ const styles = StyleSheet.create({
     color: '#888',
     fontSize: 12,
     marginRight: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+    paddingBottom: 12,
+  },
+  closeBtn: {
+    padding: 8,
+  },
+  closeBtnText: {
+    color: '#FF4545',
+    fontWeight: '600',
+  },
+  reviewCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reviewerAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 10,
+  },
+  reviewerInfo: {
+    flex: 1,
+  },
+  reviewerName: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  starRow: {
+    flexDirection: 'row',
+  },
+  reviewDate: {
+    color: '#888',
+    fontSize: 10,
+  },
+  reviewComment: {
+    color: '#CCC',
+    fontSize: 13,
+    marginTop: 8,
+    lineHeight: 18,
   },
 });
 

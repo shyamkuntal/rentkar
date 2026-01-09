@@ -15,6 +15,7 @@ import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import NotificationsScreen from '../screens/profile/NotificationsScreen';
 import PrivacySecurityScreen from '../screens/profile/PrivacySecurityScreen';
 import SettingsScreen from '../screens/profile/SettingsScreen';
+import ReviewsScreen from '../screens/profile/ReviewsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -40,6 +41,7 @@ const AppStack = () => {
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="PrivacySecurity" component={PrivacySecurityScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="Reviews" component={ReviewsScreen} />
     </Stack.Navigator>
   );
 };

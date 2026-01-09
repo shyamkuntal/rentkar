@@ -38,6 +38,8 @@ type Item struct {
 	Status      string             `json:"status" bson:"status"`
 	Views       int                `json:"views" bson:"views"`
 	Favorites   int                `json:"favorites" bson:"favorites"`
+	Rating      float64            `json:"rating" bson:"rating"`
+	Reviews     int                `json:"reviews" bson:"reviews"`
 	CreatedAt   time.Time          `json:"createdAt" bson:"createdAt"`
 	UpdatedAt   time.Time          `json:"updatedAt" bson:"updatedAt"`
 }
@@ -56,12 +58,14 @@ type Booking struct {
 	EndDate       time.Time          `json:"endDate" bson:"endDate"`
 	TotalPrice    float64            `json:"totalPrice" bson:"totalPrice"`
 	Status        string             `json:"status" bson:"status"`
-	PaymentStatus string             `json:"paymentStatus" bson:"paymentStatus"`
-	PickupAddress string             `json:"pickupAddress" bson:"pickupAddress"`
-	DropAddress   string             `json:"dropAddress" bson:"dropAddress"`
-	Notes         string             `json:"notes" bson:"notes"`
-	CreatedAt     time.Time          `json:"createdAt" bson:"createdAt"`
-	UpdatedAt     time.Time          `json:"updatedAt" bson:"updatedAt"`
+	PaymentStatus      string             `json:"paymentStatus" bson:"paymentStatus"`
+	PickupAddress      string             `json:"pickupAddress" bson:"pickupAddress"`
+	DropAddress        string             `json:"dropAddress" bson:"dropAddress"`
+	Notes              string             `json:"notes" bson:"notes"`
+	CancelledBy        primitive.ObjectID `json:"cancelledBy,omitempty" bson:"cancelledBy,omitempty"`
+	CancellationReason string             `json:"cancellationReason,omitempty" bson:"cancellationReason,omitempty"`
+	CreatedAt          time.Time          `json:"createdAt" bson:"createdAt"`
+	UpdatedAt          time.Time          `json:"updatedAt" bson:"updatedAt"`
 }
 
 // Chat model

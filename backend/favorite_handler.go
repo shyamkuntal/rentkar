@@ -69,6 +69,7 @@ func getFavorites(w http.ResponseWriter, r *http.Request) {
 				Images:    item.Images,
 				Price:     item.Price,
 				Category:  item.Category,
+				Rating:    item.Rating,
 				CreatedAt: fav.CreatedAt,
 			})
 		}
