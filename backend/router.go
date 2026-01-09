@@ -74,6 +74,7 @@ func SetupRouter() http.Handler {
 	mux.HandleFunc("/api/reviews/item/", HandleReviewsByItem)
 	mux.HandleFunc("/api/reviews/user/", HandleReviewsByUser)
 	mux.HandleFunc("/api/reviews/booking/", AuthMiddleware(HandleReviewsByBooking))
+	mux.HandleFunc("/api/reviews/recalculate-all", HandleRecalculateAllRatings)
 
 	return handler
 }

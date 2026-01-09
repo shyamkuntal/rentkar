@@ -122,7 +122,7 @@ const MyListingsScreen = () => {
             {item.rating > 0 && (
               <View style={[styles.stat, { marginLeft: 12 }]}>
                 <Star size={12} color="#FFD700" fill="#FFD700" />
-                <Text style={[styles.statText, { color: '#FFD700' }]}>{item.rating.toFixed(1)} ({item.reviews || 0})</Text>
+                <Text style={[styles.statText, { color: '#FFD700' }]}>{item.rating.toFixed(1)}/5 ({item.reviews || 0})</Text>
               </View>
             )}
             <View style={styles.toggleContainer}>
@@ -257,7 +257,7 @@ const MyListingsScreen = () => {
         onRequestClose={() => setReviewsModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <GlassView style={[styles.modalContent, { height: '80%', maxWidth: '100%' }]} intensity={40} borderRadius={24}>
+          <GlassView style={[styles.modalContent, { height: '50%', maxWidth: '100%' }]} intensity={40} borderRadius={24} contentContainerStyle={{ flex: 1 }}>
             <View style={{ flex: 1 }}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Item Reviews</Text>
@@ -289,7 +289,7 @@ const MyListingsScreen = () => {
                             {[1, 2, 3, 4, 5].map((star) => (
                               <Star
                                 key={star}
-                                size={12}
+                                size={10}
                                 color="#FFD700"
                                 fill={star <= item.rating ? "#FFD700" : "transparent"}
                               />
@@ -556,10 +556,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.1)',
-    paddingBottom: 12,
+    paddingBottom: 8,
   },
   closeBtn: {
     padding: 8,
@@ -571,26 +571,29 @@ const styles = StyleSheet.create({
   reviewCard: {
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
+    padding: 10,
+    marginBottom: 8,
   },
   reviewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   reviewerAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    marginRight: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    marginRight: 8,
   },
   reviewerInfo: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   reviewerName: {
     color: '#FFF',
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 13,
+    marginRight: 8,
   },
   starRow: {
     flexDirection: 'row',
@@ -601,9 +604,9 @@ const styles = StyleSheet.create({
   },
   reviewComment: {
     color: '#CCC',
-    fontSize: 13,
-    marginTop: 8,
-    lineHeight: 18,
+    fontSize: 12,
+    marginTop: 4,
+    lineHeight: 16,
   },
 });
 

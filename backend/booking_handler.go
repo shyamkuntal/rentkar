@@ -208,13 +208,20 @@ func getMyBookings(w http.ResponseWriter, r *http.Request) {
 		// Populate item
 		var item Item
 		if err := itemCol.FindOne(ctx, bson.M{"_id": b.ItemID}).Decode(&item); err == nil {
-			pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category, Location: item.Location, Description: item.Description}
+			pb.Item = &Item{
+				ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, 
+				Category: item.Category, Location: item.Location, Description: item.Description,
+				Rating: item.Rating, Reviews: item.Reviews,
+			}
 		}
 
 		// Populate owner
 		var owner User
 		if err := userCol.FindOne(ctx, bson.M{"_id": b.OwnerID}).Decode(&owner); err == nil {
-			pb.Owner = &User{ID: owner.ID, Name: owner.Name, Avatar: owner.Avatar}
+			pb.Owner = &User{
+				ID: owner.ID, Name: owner.Name, Avatar: owner.Avatar,
+				Rating: owner.Rating, TotalRatings: owner.TotalRatings,
+			}
 		}
 
 		populatedBookings = append(populatedBookings, pb)
@@ -282,13 +289,20 @@ func getOwnerBookings(w http.ResponseWriter, r *http.Request) {
 		// Populate item
 		var item Item
 		if err := itemCol.FindOne(ctx, bson.M{"_id": b.ItemID}).Decode(&item); err == nil {
-			pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category, Location: item.Location, Description: item.Description}
+			pb.Item = &Item{
+				ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, 
+				Category: item.Category, Location: item.Location, Description: item.Description,
+				Rating: item.Rating, Reviews: item.Reviews,
+			}
 		}
 
 		// Populate renter
 		var renter User
 		if err := userCol.FindOne(ctx, bson.M{"_id": b.RenterID}).Decode(&renter); err == nil {
-			pb.Renter = &User{ID: renter.ID, Name: renter.Name, Avatar: renter.Avatar}
+			pb.Renter = &User{
+				ID: renter.ID, Name: renter.Name, Avatar: renter.Avatar,
+				Rating: renter.Rating, TotalRatings: renter.TotalRatings,
+			}
 		}
 
 		populatedBookings = append(populatedBookings, pb)
@@ -354,17 +368,27 @@ func getBooking(w http.ResponseWriter, r *http.Request, id string) {
 
 	var item Item
 	if err := itemCol.FindOne(ctx, bson.M{"_id": booking.ItemID}).Decode(&item); err == nil {
-		pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category, Location: item.Location, Description: item.Description}
+		pb.Item = &Item{
+			ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, 
+			Category: item.Category, Location: item.Location, Description: item.Description,
+			Rating: item.Rating, Reviews: item.Reviews,
+		}
 	}
 
 	var owner User
 	if err := userCol.FindOne(ctx, bson.M{"_id": booking.OwnerID}).Decode(&owner); err == nil {
-		pb.Owner = &User{ID: owner.ID, Name: owner.Name, Avatar: owner.Avatar}
+		pb.Owner = &User{
+			ID: owner.ID, Name: owner.Name, Avatar: owner.Avatar,
+			Rating: owner.Rating, TotalRatings: owner.TotalRatings,
+		}
 	}
 
 	var renter User
 	if err := userCol.FindOne(ctx, bson.M{"_id": booking.RenterID}).Decode(&renter); err == nil {
-		pb.Renter = &User{ID: renter.ID, Name: renter.Name, Avatar: renter.Avatar}
+		pb.Renter = &User{
+			ID: renter.ID, Name: renter.Name, Avatar: renter.Avatar,
+			Rating: renter.Rating, TotalRatings: renter.TotalRatings,
+		}
 	}
 
 	JSON(w, http.StatusOK, map[string]interface{}{"booking": pb})

@@ -43,16 +43,16 @@ const LenderProfileScreen = () => {
   };
 
   const renderListingItem = ({ item }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.listingCard}
-      onPress={() => navigation.navigate('ItemDetail', { 
+      onPress={() => navigation.navigate('ItemDetail', {
         product: { ...item, owner: owner },
-        hideProfileLink: true 
+        hideProfileLink: true
       })}
     >
-      <Image 
-        source={{ uri: item.images && item.images.length > 0 ? item.images[0] : (item.image || 'https://via.placeholder.com/400') }} 
-        style={styles.listingImage} 
+      <Image
+        source={{ uri: item.images && item.images.length > 0 ? item.images[0] : (item.image || 'https://via.placeholder.com/400') }}
+        style={styles.listingImage}
       />
       <View style={styles.listingInfo}>
         <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
@@ -69,48 +69,48 @@ const LenderProfileScreen = () => {
           <ChevronLeft size={24} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Lender Profile</Text>
-        <View style={{ width: 40 }} /> 
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Profile Info */}
         <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-               <Image source={{ uri: owner.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg' }} style={styles.avatar} />
-               <View style={styles.verifiedBadge}>
-                  <ShieldCheck size={16} color="#FFF" fill="#1DA1F2" />
-               </View>
+          <View style={styles.avatarContainer}>
+            <Image source={{ uri: owner.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg' }} style={styles.avatar} />
+            <View style={styles.verifiedBadge}>
+              <ShieldCheck size={16} color="#FFF" fill="#1DA1F2" />
             </View>
-            <Text style={styles.name}>{owner.name}</Text>
-            <View style={styles.locationRow}>
-                <MapPin size={14} color="#888" />
-                <Text style={styles.location}>{owner.location || 'Location not set'}</Text>
-            </View>
+          </View>
+          <Text style={styles.name}>{owner.name}</Text>
+          <View style={styles.locationRow}>
+            <MapPin size={14} color="#888" />
+            <Text style={styles.location}>{owner.location || 'Location not set'}</Text>
+          </View>
 
-            {/* Stats Row */}
-            <View style={styles.statsContainer}>
-                <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{owner.rating || 0}</Text>
-                    <View style={styles.ratingRow}>
-                         <Star size={12} fill="#FFD700" color="#FFD700"/>
-                         <Text style={styles.statLabel}> Rating</Text>
-                    </View>
-                </View>
-                <View style={styles.divider} />
-                <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{owner.responseRate || '100%'}</Text>
-                    <Text style={styles.statLabel}>Response</Text>
-                </View>
-                <View style={styles.divider} />
-                <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{listings.length}</Text>
-                    <Text style={styles.statLabel}>Listings</Text>
-                </View>
+          {/* Stats Row */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{owner.rating ? `${Number(owner.rating).toFixed(1)}/5` : '-'}</Text>
+              <View style={styles.ratingRow}>
+                <Star size={12} fill="#FFD700" color="#FFD700" />
+                <Text style={styles.statLabel}> Rating</Text>
+              </View>
             </View>
+            <View style={styles.divider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{owner.responseRate || '100%'}</Text>
+              <Text style={styles.statLabel}>Response</Text>
+            </View>
+            <View style={styles.divider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{listings.length}</Text>
+              <Text style={styles.statLabel}>Listings</Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Active Listings</Text>
+          <Text style={styles.sectionTitle}>Active Listings</Text>
         </View>
 
         {/* Listings Grid */}
@@ -122,12 +122,12 @@ const LenderProfileScreen = () => {
           </View>
         ) : (
           <FlatList
-              data={listings}
-              renderItem={renderListingItem}
-              keyExtractor={item => item.id}
-              numColumns={2}
-              scrollEnabled={false}
-              columnWrapperStyle={styles.columnWrapper}
+            data={listings}
+            renderItem={renderListingItem}
+            keyExtractor={item => item.id}
+            numColumns={2}
+            scrollEnabled={false}
+            columnWrapperStyle={styles.columnWrapper}
           />
         )}
       </ScrollView>
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   headerTitle: { color: '#FFF', fontSize: 18, fontWeight: '600' },
   backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
-  
+
   profileSection: { alignItems: 'center', marginTop: 20, marginBottom: 40 },
   avatarContainer: { position: 'relative' },
   avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 16 },

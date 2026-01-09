@@ -116,7 +116,10 @@ const BookingDetailScreen = () => {
     const handleCancelBooking = async () => {
         console.log('Cancel Reason:', cancelReason);
         if (!cancelReason.trim()) {
-            Alert.alert('Reason Required', 'Please provide a reason for cancellation');
+            // Replaced Alert.alert with custom modal
+            setModalType('error');
+            setModalMessage('Please provide a reason for cancellation');
+            setModalVisible(true);
             return;
         }
         

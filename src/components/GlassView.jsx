@@ -26,6 +26,7 @@ const GlassView = ({
   variant = 'dark',
   showShine = true,
   tintOpacity = 0.1,
+  contentContainerStyle,
 }) => {
   const isDark = variant === 'dark';
   
@@ -121,7 +122,7 @@ const GlassView = ({
       <View style={[styles.borderLayer, { borderRadius, borderColor: colors.border }]} />
 
       {/* Layer 6: Content */}
-      <View style={styles.content}>
+      <View style={[styles.content, contentContainerStyle]}>
         {children}
       </View>
     </View>

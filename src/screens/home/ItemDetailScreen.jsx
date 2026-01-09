@@ -184,7 +184,7 @@ const ProductDetailsScreen = () => {
             </View>
             <View style={styles.ratingBadge}>
               <Star size={14} color="#FFD700" fill="#FFD700" />
-              <Text style={styles.ratingText}> {product.rating ? Number(product.rating).toFixed(1) : 'New'} ({product.reviews || 0} reviews)</Text>
+              <Text style={styles.ratingText}> {product.rating ? `${Number(product.rating).toFixed(1)}/5` : 'New'} ({product.reviews || 0} reviews)</Text>
             </View>
           </View>
 
@@ -194,7 +194,19 @@ const ProductDetailsScreen = () => {
             <View style={styles.ownerInfo}>
               <Text style={styles.ownerLabel}>Lender</Text>
               <Text style={styles.ownerName}>{product.owner?.name || 'Unknown User'}</Text>
-              <Text style={styles.ownerResponse}>Response Rate: {product.owner?.responseRate || 'N/A'}</Text>
+              <View style={styles.ownerRatingRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    size={12}
+                    color="#FFD700"
+                    fill={star <= Math.round(product.owner?.rating || 0) ? '#FFD700' : 'transparent'}
+                  />
+                ))}
+                <Text style={styles.ownerRatingText}>
+                  {product.owner?.rating ? `${Number(product.owner.rating).toFixed(1)}/5` : 'No rating'}
+                </Text>
+              </View>
             </View>
 
             {/* Added onPress here, hidden if navigated from profile or is owner */}
@@ -430,10 +442,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text.primary,
   },
-  ownerResponse: {
+  ownerRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  ownerRatingText: {
     fontSize: 12,
     color: colors.text.secondary,
-    marginTop: 4,
+    marginLeft: 6,
   },
   viewProfileBtn: {
     backgroundColor: 'rgba(255,255,255,0.08)',

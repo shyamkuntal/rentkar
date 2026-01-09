@@ -254,7 +254,71 @@ func updateTargetRating(ctx context.Context, targetType string, targetID primiti
 	} else {
 		GetCollection("users").UpdateOne(ctx,
 			bson.M{"_id": targetID},
-			bson.M{"$set": bson.M{"rating": avgRating, "reviewCount": reviewCount}},
+			bson.M{"$set": bson.M{"rating": avgRating, "totalRatings": reviewCount}},
 		)
 	}
+}
+
+// HandleRecalculateAllRatings - POST to recalculate all item and user ratings
+// This is a utility endpoint to fix stale rating data
+func HandleRecalculateAllRatings(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		JSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	// Get all unique item IDs from reviews
+	itemPipeline := []bson.M{
+		{"$match": bson.M{"targetType": "item"}},
+		{"$group": bson.M{"_id": "$targetId"}},
+	}
+	itemCursor, err := GetCollection("reviews").Aggregate(ctx, itemPipeline)
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, "Failed to aggregate item reviews")
+		return
+	}
+	defer itemCursor.Close(ctx)
+
+	var itemResults []struct {
+		ID primitive.ObjectID `bson:"_id"`
+	}
+	itemCursor.All(ctx, &itemResults)
+
+	itemsUpdated := 0
+	for _, item := range itemResults {
+		updateTargetRating(ctx, "item", item.ID)
+		itemsUpdated++
+	}
+
+	// Get all unique user IDs from reviews
+	userPipeline := []bson.M{
+		{"$match": bson.M{"targetType": "user"}},
+		{"$group": bson.M{"_id": "$targetId"}},
+	}
+	userCursor, err := GetCollection("reviews").Aggregate(ctx, userPipeline)
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, "Failed to aggregate user reviews")
+		return
+	}
+	defer userCursor.Close(ctx)
+
+	var userResults []struct {
+		ID primitive.ObjectID `bson:"_id"`
+	}
+	userCursor.All(ctx, &userResults)
+
+	usersUpdated := 0
+	for _, user := range userResults {
+		updateTargetRating(ctx, "user", user.ID)
+		usersUpdated++
+	}
+
+	JSON(w, http.StatusOK, map[string]interface{}{
+		"message":      "Ratings recalculated successfully",
+		"itemsUpdated": itemsUpdated,
+		"usersUpdated": usersUpdated,
+	})
 }
