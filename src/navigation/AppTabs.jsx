@@ -93,14 +93,7 @@ const LiquidGlassSwitcher = ({ state, descriptors, navigation }) => {
     }
   }, [state.index]);
 
-  // Check if Post screen is active - hide tab bar
-  // MOVED AFTER HOOKS TO PREVENT RENDER ERROR
-  const activeRoute = state.routes[state.index];
-  if (activeRoute?.name === 'Post') {
-    return null;
-  }
-
-  // Pending requests count for Bookings badge
+  // Pending requests count for Bookings badge - MUST be before early return
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   useEffect(() => {
@@ -113,8 +106,14 @@ const LiquidGlassSwitcher = ({ state, descriptors, navigation }) => {
       }
     };
     fetchPendingCount();
-    // Refresh every time navigation state changes
   }, [state.index]);
+
+  // Check if Post screen is active - hide tab bar
+  // This early return MUST come AFTER all hooks
+  const activeRoute = state.routes[state.index];
+  if (activeRoute?.name === 'Post') {
+    return null;
+  }
 
   const getIcon = (routeName, focused) => {
     const color = focused ? '#e1e1e1' : '#888';

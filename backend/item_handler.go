@@ -83,13 +83,34 @@ func getItems(w http.ResponseWriter, r *http.Request) {
 	filter := bson.M{}
 	
 	// When filtering by specific owner, show all their items
-	// Otherwise only show active items
+	// Otherwise only show active items that are not currently booked
 	if ownerId := r.URL.Query().Get("ownerId"); ownerId != "" {
 		ownerObjId, _ := primitive.ObjectIDFromHex(ownerId)
 		filter["ownerId"] = ownerObjId
 		filter["status"] = "active" // Only show active items for now
 	} else {
 		filter["status"] = "active"
+		
+		// Exclude items that have active bookings (pending or confirmed)
+		bookingCol := GetCollection("bookings")
+		bookingCursor, err := bookingCol.Find(ctx, bson.M{
+			"status": bson.M{"$in": []string{"pending", "confirmed"}},
+		})
+		if err == nil {
+			defer bookingCursor.Close(ctx)
+			var bookedItemIDs []primitive.ObjectID
+			for bookingCursor.Next(ctx) {
+				var booking struct {
+					ItemID primitive.ObjectID `bson:"itemId"`
+				}
+				if err := bookingCursor.Decode(&booking); err == nil {
+					bookedItemIDs = append(bookedItemIDs, booking.ItemID)
+				}
+			}
+			if len(bookedItemIDs) > 0 {
+				filter["_id"] = bson.M{"$nin": bookedItemIDs}
+			}
+		}
 	}
 	
 	if cat := r.URL.Query().Get("category"); cat != "" {

@@ -24,6 +24,7 @@ import {
 } from 'lucide-react-native';
 import { createChat } from '../../services/chatService';
 import { checkFavorite, addFavorite, removeFavorite } from '../../services/favoriteService';
+import { getItemReviews } from '../../services/reviewService';
 import { AuthContext } from '../../context/AuthContext';
 
 const colors = {
@@ -53,12 +54,23 @@ const ProductDetailsScreen = () => {
 
   const [isFavorite, setIsFavorite] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
+  const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
     if (product?.id) {
       checkFavoriteStatus();
+      fetchReviews();
     }
   }, [product?.id]);
+
+  const fetchReviews = async () => {
+    try {
+      const response = await getItemReviews(product.id);
+      setReviews(response.reviews || []);
+    } catch (error) {
+      console.log('Error fetching reviews:', error);
+    }
+  };
 
   const checkFavoriteStatus = async () => {
     try {
@@ -197,6 +209,39 @@ const ProductDetailsScreen = () => {
             <Text style={styles.sectionTitle}>Description</Text>
             <Text style={styles.descriptionText}>{product.description}</Text>
           </View>
+
+          {/* Reviews Section */}
+          {reviews.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Reviews ({reviews.length})</Text>
+              {reviews.slice(0, 3).map((review) => (
+                <View key={review.id} style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <Image
+                      source={{ uri: review.reviewer?.avatar || 'https://via.placeholder.com/40' }}
+                      style={styles.reviewerAvatar}
+                    />
+                    <View style={styles.reviewerInfo}>
+                      <Text style={styles.reviewerName}>{review.reviewer?.name || 'Anonymous'}</Text>
+                      <View style={styles.starRow}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            size={14}
+                            color="#FFD700"
+                            fill={star <= review.rating ? "#FFD700" : "transparent"}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+                  {review.comment && (
+                    <Text style={styles.reviewComment}>{review.comment}</Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
 
           <View style={{ height: 110 }} />
         </View>
@@ -449,8 +494,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   chatButton: {
-    justifyContent: 'center',
-    alignItems: 'center',
+    // justifyContent: '',
+    // alignItems: 'center',
     paddingHorizontal: 16,
     flex: 1, // Allow it to flex
   },
@@ -475,6 +520,41 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '700',
+  },
+  // Review styles
+  reviewCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 10,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reviewerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 10,
+  },
+  reviewerInfo: {
+    flex: 1,
+  },
+  reviewerName: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  starRow: {
+    flexDirection: 'row',
+  },
+  reviewComment: {
+    color: '#CCC',
+    fontSize: 13,
+    marginTop: 8,
+    lineHeight: 18,
   },
 });
 

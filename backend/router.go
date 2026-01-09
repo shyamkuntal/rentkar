@@ -69,6 +69,11 @@ func SetupRouter() http.Handler {
 	mux.HandleFunc("/api/favorites", AuthMiddleware(HandleFavorites))
 	mux.HandleFunc("/api/favorites/", AuthMiddleware(HandleFavoriteByID))
 
+	// Review routes
+	mux.HandleFunc("/api/reviews", AuthMiddleware(HandleReviews))
+	mux.HandleFunc("/api/reviews/item/", HandleReviewsByItem)
+	mux.HandleFunc("/api/reviews/user/", HandleReviewsByUser)
+
 	return handler
 }
 

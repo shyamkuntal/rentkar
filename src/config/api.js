@@ -55,6 +55,11 @@ export const API_ENDPOINTS = {
 
   // Reports
   REPORTS: `${API_BASE_URL}/reports`,
+
+  // Reviews
+  REVIEWS: `${API_BASE_URL}/reviews`,
+  ITEM_REVIEWS: (id) => `${API_BASE_URL}/reviews/item/${id}`,
+  USER_REVIEWS: (id) => `${API_BASE_URL}/reviews/user/${id}`,
 };
 
 export default API_BASE_URL;

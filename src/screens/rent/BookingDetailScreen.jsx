@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, SafeAreaView, Alert, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, SafeAreaView, Alert, ActivityIndicator, Modal, TextInput } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ChevronLeft, Calendar, User, MapPin, Receipt, ArrowRight, CheckCircle, XCircle } from 'lucide-react-native';
+import { ChevronLeft, Calendar, User, MapPin, Receipt, ArrowRight, CheckCircle, XCircle, Star } from 'lucide-react-native';
 import { createChat } from '../../services/chatService';
+import { createReview } from '../../services/reviewService';
 
 const BookingDetailScreen = () => {
     const navigation = useNavigation();
@@ -35,8 +36,41 @@ const BookingDetailScreen = () => {
     const [modalVisible, setModalVisible] = React.useState(false);
     const [modalType, setModalType] = React.useState(null); // 'success' or 'error'
     const [modalMessage, setModalMessage] = React.useState('');
+    
+    // Review modal state
+    const [reviewModalVisible, setReviewModalVisible] = React.useState(false);
+    const [reviewRating, setReviewRating] = React.useState(0);
+    const [reviewComment, setReviewComment] = React.useState('');
+    const [reviewSubmitting, setReviewSubmitting] = React.useState(false);
 
     const showAcceptance = isOwnerView && booking.status === 'pending';
+    const canReview = !isOwnerView && (booking.status === 'confirmed' || booking.status === 'completed');
+
+    const handleSubmitReview = async () => {
+        if (reviewRating === 0) {
+            setModalType('error');
+            setModalMessage('Please select a rating');
+            setModalVisible(true);
+            return;
+        }
+        
+        setReviewSubmitting(true);
+        try {
+            await createReview(booking.id, 'item', product.id, reviewRating, reviewComment);
+            setReviewModalVisible(false);
+            setReviewRating(0);
+            setReviewComment('');
+            setModalType('success');
+            setModalMessage('Review submitted successfully!');
+            setModalVisible(true);
+        } catch (error) {
+            setModalType('error');
+            setModalMessage(error.message || 'Failed to submit review');
+            setModalVisible(true);
+        } finally {
+            setReviewSubmitting(false);
+        }
+    };
 
     const handleUpdateStatus = async (newStatus) => {
         setAccepting(true);
@@ -264,7 +298,7 @@ const BookingDetailScreen = () => {
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.actionBtn, styles.acceptBtn]}
-                            onPress={() => handleUpdateStatus('confirmed')} // backend uses 'confirmed' or 'accepted'? Schema said status string. usually 'confirmed'.
+                            onPress={() => handleUpdateStatus('confirmed')}
                             disabled={accepting}
                         >
                             {accepting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.acceptText}>Accept Booking</Text>}
@@ -272,10 +306,21 @@ const BookingDetailScreen = () => {
                     </View>
                 )}
 
+                {/* Leave Review Button - only for renters with confirmed bookings */}
+                {canReview && (
+                    <TouchableOpacity 
+                        style={styles.reviewBtn} 
+                        onPress={() => setReviewModalVisible(true)}
+                    >
+                        <Star size={18} color="#FFD700" fill="#FFD700" style={{ marginRight: 8 }} />
+                        <Text style={styles.reviewBtnText}>Leave a Review</Text>
+                    </TouchableOpacity>
+                )}
+
                 <View style={{ height: 40 }} />
 
             </ScrollView>
-            
+
             {/* Success/Error Modal */}
             <Modal
                 animationType="fade"
@@ -288,8 +333,8 @@ const BookingDetailScreen = () => {
                         <View style={[
                             styles.modalIconContainer,
                             modalType === 'success' ? styles.modalIconSuccess :
-                            modalType === 'rejected' ? styles.modalIconRejected :
-                            styles.modalIconError
+                                modalType === 'rejected' ? styles.modalIconRejected :
+                                    styles.modalIconError
                         ]}>
                             {modalType === 'success' ? (
                                 <CheckCircle size={32} color="#5CD189" />
@@ -299,10 +344,10 @@ const BookingDetailScreen = () => {
                         </View>
                         <Text style={styles.modalTitle}>
                             {modalType === 'success' ? 'Booking Accepted!' :
-                             modalType === 'rejected' ? 'Booking Rejected' : 'Error'}
+                                modalType === 'rejected' ? 'Booking Rejected' : 'Error'}
                         </Text>
                         <Text style={styles.modalDescription}>{modalMessage}</Text>
-                        
+
                         <TouchableOpacity style={styles.modalOkBtn} onPress={closeModalAndGoBack}>
                             <Text style={styles.modalOkText}>OK</Text>
                         </TouchableOpacity>
@@ -378,7 +423,7 @@ const styles = StyleSheet.create({
     acceptBtn: { backgroundColor: '#5CD189' },
     rejectText: { color: '#FF5A5F', fontWeight: '600', fontSize: 16 },
     acceptText: { color: '#000', fontWeight: '700', fontSize: 16 },
-    
+
     // Modal styles
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 },
     modalBox: { width: '100%', maxWidth: 340, padding: 24, backgroundColor: '#2A2A30', borderRadius: 24, alignItems: 'center' },

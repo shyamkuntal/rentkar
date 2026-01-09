@@ -115,3 +115,16 @@ type Report struct {
 	Status      string             `json:"status" bson:"status"` // "pending", "resolved"
 	CreatedAt   time.Time          `json:"createdAt" bson:"createdAt"`
 }
+
+// Review model - for item and user reviews
+type Review struct {
+	ID         primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	BookingID  primitive.ObjectID `json:"bookingId" bson:"bookingId"`
+	ReviewerID primitive.ObjectID `json:"reviewerId" bson:"reviewerId"`
+	Reviewer   *User              `json:"reviewer,omitempty" bson:"-"`
+	TargetType string             `json:"targetType" bson:"targetType"` // "item" or "user"
+	TargetID   primitive.ObjectID `json:"targetId" bson:"targetId"`
+	Rating     int                `json:"rating" bson:"rating"`   // 1-5 stars
+	Comment    string             `json:"comment" bson:"comment"` // max 100 chars
+	CreatedAt  time.Time          `json:"createdAt" bson:"createdAt"`
+}
