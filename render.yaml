@@ -2,11 +2,10 @@ services:
   - type: web
     name: rentkar-backend
     runtime: go
-    buildCommand: cd backend && go build -o bin/backend ./cmd/backend
-    startCommand: cd backend && ./bin/backend
+    rootDir: backend
+    buildCommand: go build -tags netgo -ldflags '-s -w' -o app ./cmd/backend && chmod +x app
+    startCommand: ./app
     envVars:
-      - key: PORT
-        value: "10000"
       - key: MONGODB_URI
         sync: false  # Set manually in Render dashboard
       - key: DB_NAME
