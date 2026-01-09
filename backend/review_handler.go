@@ -40,6 +40,51 @@ func HandleReviewsByUser(w http.ResponseWriter, r *http.Request) {
 	getReviewsByTarget(w, r, "user", id)
 }
 
+// HandleReviewsByBooking - GET reviews for a booking
+func HandleReviewsByBooking(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		JSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+	id := strings.TrimPrefix(r.URL.Path, "/api/reviews/booking/")
+	getReviewsByBooking(w, r, id)
+}
+
+func getReviewsByBooking(w http.ResponseWriter, r *http.Request, bookingIDStr string) {
+	bookingID, err := primitive.ObjectIDFromHex(bookingIDStr)
+	if err != nil {
+		JSONError(w, http.StatusBadRequest, "Invalid booking ID")
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cursor, err := GetCollection("reviews").Find(ctx,
+		bson.M{"bookingId": bookingID},
+		options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}),
+	)
+	if err != nil {
+		JSONError(w, http.StatusInternalServerError, "Failed to fetch reviews")
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var reviews []Review
+	cursor.All(ctx, &reviews)
+
+	// Populate reviewer info
+	userCol := GetCollection("users")
+	for i := range reviews {
+		var user User
+		if err := userCol.FindOne(ctx, bson.M{"_id": reviews[i].ReviewerID}).Decode(&user); err == nil {
+			reviews[i].Reviewer = &user
+		}
+	}
+
+	JSON(w, http.StatusOK, map[string]interface{}{"reviews": reviews})
+}
+
 func createReview(w http.ResponseWriter, r *http.Request) {
 	userID, _ := GetUserID(r)
 

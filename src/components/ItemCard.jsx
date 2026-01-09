@@ -65,15 +65,26 @@ const ItemCard = ({ item, onPress }) => {
                 <Text style={styles.location}>{item.location || 'Mumbai'}</Text>
               </View>
               
-              {item.owner && (
-                <View style={styles.ownerRow}>
-                  <Image 
-                    source={{ uri: item.owner.avatar || 'https://randomuser.me/api/portraits/men/32.jpg' }} 
-                    style={styles.ownerAvatar} 
-                  />
-                  <Text style={styles.ownerName}>by {item.owner.name}</Text>
-                </View>
-              )}
+              <View style={styles.bottomRow}>
+                {item.owner && (
+                  <View style={styles.ownerRow}>
+                    <Image 
+                      source={{ uri: item.owner.avatar || 'https://randomuser.me/api/portraits/men/32.jpg' }} 
+                      style={styles.ownerAvatar} 
+                    />
+                    <Text style={styles.ownerName}>by {item.owner.name}</Text>
+                  </View>
+                )}
+                
+                {item.rating > 0 && (
+                  <View style={styles.ratingRow}>
+                    <View style={styles.starIcon}>
+                      <Text style={styles.starText}>★</Text>
+                    </View>
+                    <Text style={styles.ratingText}>{item.rating?.toFixed(1)}</Text>
+                  </View>
+                )}
+              </View>
             </View>
           </View>
         </View>
@@ -219,6 +230,36 @@ const styles = StyleSheet.create({
   ownerName: {
     fontSize: 11,
     color: '#888',
+  },
+  
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  
+  starIcon: {
+    marginRight: 2,
+  },
+  
+  starText: {
+    color: '#FFD700',
+    fontSize: 10,
+  },
+  
+  ratingText: {
+    fontSize: 11,
+    color: '#FFD700',
+    fontWeight: '600',
   },
 });
 

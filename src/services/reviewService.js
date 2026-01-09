@@ -21,3 +21,8 @@ export const getItemReviews = async (itemId) => {
 export const getUserReviews = async (userId) => {
   return await get(API_ENDPOINTS.USER_REVIEWS(userId));
 };
+
+// Get reviews for a booking (to check if user already reviewed)
+export const getBookingReviews = async (bookingId) => {
+  return await get(API_ENDPOINTS.BOOKING_REVIEWS(bookingId));
+};

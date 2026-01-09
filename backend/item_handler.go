@@ -91,10 +91,22 @@ func getItems(w http.ResponseWriter, r *http.Request) {
 	} else {
 		filter["status"] = "active"
 		
-		// Exclude items that have active bookings (pending or confirmed)
+		// Exclude items that have CURRENTLY active bookings
+		// - pending bookings where startDate hasn't passed yet
+		// - confirmed bookings where endDate hasn't passed yet
+		now := time.Now()
 		bookingCol := GetCollection("bookings")
 		bookingCursor, err := bookingCol.Find(ctx, bson.M{
-			"status": bson.M{"$in": []string{"pending", "confirmed"}},
+			"$or": []bson.M{
+				{
+					"status": "pending",
+					"startDate": bson.M{"$gte": now}, // Pending booking with future start date
+				},
+				{
+					"status": "confirmed",
+					"endDate": bson.M{"$gte": now}, // Confirmed booking that hasn't ended yet
+				},
+			},
 		})
 		if err == nil {
 			defer bookingCursor.Close(ctx)

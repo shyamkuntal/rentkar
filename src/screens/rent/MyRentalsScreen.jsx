@@ -70,12 +70,62 @@ const MyRentalsScreen = () => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'confirmed': return styles.statusActive;
+  // Determine display status based on booking status and dates
+  const getDisplayStatus = (booking) => {
+    const now = new Date();
+    const endDate = new Date(booking.endDate);
+    const startDate = new Date(booking.startDate);
+    
+    if (booking.status === 'rejected' || booking.status === 'cancelled') {
+      return booking.status;
+    }
+    
+    if (booking.status === 'completed') {
+      return 'completed';
+    }
+    
+    if (booking.status === 'confirmed') {
+      if (endDate < now) {
+        return 'expired'; // Past end date
+      } else if (startDate <= now && endDate >= now) {
+        return 'ongoing'; // Currently active
+      } else {
+        return 'confirmed'; // Future booking
+      }
+    }
+    
+    if (booking.status === 'pending') {
+      if (startDate < now) {
+        return 'expired'; // Pending but start date passed
+      }
+      return 'pending';
+    }
+    
+    return booking.status;
+  };
+
+  const getStatusColor = (displayStatus) => {
+    switch (displayStatus) {
+      case 'confirmed': return styles.statusConfirmed;
+      case 'ongoing': return styles.statusOngoing;
       case 'completed': return styles.statusCompleted;
-      case 'cancelled': return styles.statusCancelled;
+      case 'cancelled': 
+      case 'rejected': return styles.statusCancelled;
+      case 'expired': return styles.statusExpired;
       default: return styles.statusPending;
+    }
+  };
+
+  const getStatusLabel = (displayStatus) => {
+    switch (displayStatus) {
+      case 'confirmed': return 'Confirmed';
+      case 'ongoing': return 'Ongoing';
+      case 'completed': return 'Completed';
+      case 'cancelled': return 'Cancelled';
+      case 'rejected': return 'Rejected';
+      case 'expired': return 'Expired';
+      case 'pending': return 'Pending';
+      default: return displayStatus;
     }
   };
 
@@ -85,13 +135,15 @@ const MyRentalsScreen = () => {
     const startDate = formatDate(item.startDate);
     const endDate = formatDate(item.endDate);
     const imageUri = product.images && product.images.length > 0 ? product.images[0] : (product.image || 'https://via.placeholder.com/100');
+    
+    const displayStatus = getDisplayStatus(item);
 
     return (
       <TouchableOpacity onPress={() => handleBookingPress(item)} activeOpacity={0.8} style={{ marginBottom: 16 }}>
         <GlassView style={styles.card} borderRadius={16}>
           <View style={styles.cardHeader}>
-            <View style={[styles.statusBadge, getStatusColor(item.status)]}>
-              <Text style={styles.statusText}>{item.status}</Text>
+            <View style={[styles.statusBadge, getStatusColor(displayStatus)]}>
+              <Text style={styles.statusText}>{getStatusLabel(displayStatus)}</Text>
             </View>
             <Text style={styles.price}>₹{item.totalPrice}</Text>
           </View>
@@ -104,10 +156,16 @@ const MyRentalsScreen = () => {
                 <Calendar size={14} color="#888" />
                 <Text style={styles.dateText}>{startDate} - {endDate}</Text>
               </View>
-              {item.status === 'confirmed' && (
+              {displayStatus === 'ongoing' && (
                 <View style={styles.timeLeftBadge}>
-                  <Clock size={12} color="#FFA500" />
-                  <Text style={styles.timeLeftText}>Ongoing</Text>
+                  <Clock size={12} color="#4CAF50" />
+                  <Text style={styles.ongoingText}>In Progress</Text>
+                </View>
+              )}
+              {displayStatus === 'expired' && (
+                <View style={styles.timeLeftBadge}>
+                  <Clock size={12} color="#888" />
+                  <Text style={styles.expiredText}>Rental Period Ended</Text>
                 </View>
               )}
             </View>
@@ -186,8 +244,12 @@ const styles = StyleSheet.create({
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  statusActive: { backgroundColor: 'rgba(29, 161, 242, 0.2)' },
+  statusConfirmed: { backgroundColor: 'rgba(29, 161, 242, 0.2)' },
+  statusOngoing: { backgroundColor: 'rgba(76, 175, 80, 0.2)' },
   statusCompleted: { backgroundColor: 'rgba(92, 209, 137, 0.2)' },
+  statusExpired: { backgroundColor: 'rgba(128, 128, 128, 0.2)' },
+  statusPending: { backgroundColor: 'rgba(255, 193, 7, 0.2)' },
+  statusCancelled: { backgroundColor: 'rgba(255, 69, 69, 0.2)' },
   statusText: { fontSize: 12, fontWeight: '600', color: '#FFF', textTransform: 'capitalize' },
   price: { fontSize: 16, fontWeight: '700', color: '#FF5A5F' },
 
@@ -198,9 +260,8 @@ const styles = StyleSheet.create({
   dateRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   dateText: { color: '#888', fontSize: 13, marginLeft: 6 },
   timeLeftBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  timeLeftText: { color: '#FFA500', fontSize: 12, marginLeft: 4, fontWeight: '500' },
-  statusPending: { backgroundColor: 'rgba(255, 193, 7, 0.2)' },
-  statusCancelled: { backgroundColor: 'rgba(255, 69, 69, 0.2)' },
+  ongoingText: { color: '#4CAF50', fontSize: 12, marginLeft: 4, fontWeight: '500' },
+  expiredText: { color: '#888', fontSize: 12, marginLeft: 4, fontWeight: '500' },
   emptyContainer: {
     padding: 40,
     alignItems: 'center',

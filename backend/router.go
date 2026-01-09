@@ -73,6 +73,7 @@ func SetupRouter() http.Handler {
 	mux.HandleFunc("/api/reviews", AuthMiddleware(HandleReviews))
 	mux.HandleFunc("/api/reviews/item/", HandleReviewsByItem)
 	mux.HandleFunc("/api/reviews/user/", HandleReviewsByUser)
+	mux.HandleFunc("/api/reviews/booking/", AuthMiddleware(HandleReviewsByBooking))
 
 	return handler
 }

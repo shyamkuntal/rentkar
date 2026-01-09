@@ -60,6 +60,7 @@ export const API_ENDPOINTS = {
   REVIEWS: `${API_BASE_URL}/reviews`,
   ITEM_REVIEWS: (id) => `${API_BASE_URL}/reviews/item/${id}`,
   USER_REVIEWS: (id) => `${API_BASE_URL}/reviews/user/${id}`,
+  BOOKING_REVIEWS: (id) => `${API_BASE_URL}/reviews/booking/${id}`,
 };
 
 export default API_BASE_URL;

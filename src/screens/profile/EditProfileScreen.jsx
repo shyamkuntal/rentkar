@@ -1,44 +1,111 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image } from 'react-native';
+import React, { useState, useContext, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Image, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, Camera, User, Mail, Phone, MapPin } from 'lucide-react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import { AuthContext } from '../../context/AuthContext';
+import { updateProfile } from '../../services/userService';
 
 const EditProfileScreen = () => {
   const navigation = useNavigation();
-  const [name, setName] = useState('Shyam Kuntal');
-  const [email, setEmail] = useState('shyam.design@gmail.com');
-  const [phone, setPhone] = useState('+91 98765 43210');
-  const [location, setLocation] = useState('Mumbai, India');
+  const { user, refreshUser } = useContext(AuthContext);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    location: '',
+  });
 
-  const handleSave = () => {
-    navigation.goBack();
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        location: user.location || '',
+      });
+    }
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!formData.name.trim()) {
+      Alert.alert('Error', 'Name is required');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await updateProfile({
+        name: formData.name,
+        phone: formData.phone,
+        location: formData.location,
+      });
+      
+      // Refresh user data in context
+      if (refreshUser) {
+        await refreshUser();
+      }
+      
+      Alert.alert('Success', 'Profile updated successfully', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAvatarPress = () => {
+    Alert.alert(
+      'Change Photo',
+      'Choose an option',
+      [
+        { text: 'Take Photo', onPress: () => console.log('Take photo') },
+        { text: 'Choose from Gallery', onPress: () => console.log('Choose from gallery') },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
   };
 
   return (
     <View style={styles.container}>
+      <LinearGradient
+        colors={['#2B2D42', '#1A1A2E', '#16161E']}
+        style={StyleSheet.absoluteFill}
+      />
+
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ChevronLeft size={24} color="#FFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
-        <TouchableOpacity onPress={handleSave}>
-          <Text style={styles.saveButton}>Save</Text>
+        <Text style={styles.headerTitle}>Personal Information</Text>
+        <TouchableOpacity onPress={handleSave} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator size="small" color="#FF5A5F" />
+          ) : (
+            <Text style={styles.saveButton}>Save</Text>
+          )}
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Avatar Section */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatarContainer}>
+          <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
             <Image 
-              source={{ uri: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200' }} 
+              source={{ uri: user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200' }} 
               style={styles.avatar} 
             />
-            <TouchableOpacity style={styles.cameraButton}>
+            <View style={styles.cameraButton}>
               <Camera size={18} color="#FFF" />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.changePhotoText}>Change Photo</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleAvatarPress}>
+            <Text style={styles.changePhotoText}>Change Photo</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Form Fields */}
@@ -51,8 +118,9 @@ const EditProfileScreen = () => {
               <Text style={styles.inputLabel}>Full Name</Text>
               <TextInput
                 style={styles.textInput}
-                value={name}
-                onChangeText={setName}
+                value={formData.name}
+                onChangeText={(text) => setFormData({...formData, name: text})}
+                placeholder="Enter your name"
                 placeholderTextColor="#666"
               />
             </View>
@@ -67,12 +135,12 @@ const EditProfileScreen = () => {
             <View style={styles.inputContainer}>
               <Text style={styles.inputLabel}>Email</Text>
               <TextInput
-                style={styles.textInput}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
+                style={[styles.textInput, styles.disabledInput]}
+                value={formData.email}
+                editable={false}
                 placeholderTextColor="#666"
               />
+              <Text style={styles.helperText}>Email cannot be changed</Text>
             </View>
           </View>
 
@@ -86,9 +154,10 @@ const EditProfileScreen = () => {
               <Text style={styles.inputLabel}>Phone</Text>
               <TextInput
                 style={styles.textInput}
-                value={phone}
-                onChangeText={setPhone}
+                value={formData.phone}
+                onChangeText={(text) => setFormData({...formData, phone: text})}
                 keyboardType="phone-pad"
+                placeholder="Enter phone number"
                 placeholderTextColor="#666"
               />
             </View>
@@ -104,13 +173,19 @@ const EditProfileScreen = () => {
               <Text style={styles.inputLabel}>Location</Text>
               <TextInput
                 style={styles.textInput}
-                value={location}
-                onChangeText={setLocation}
+                value={formData.location}
+                onChangeText={(text) => setFormData({...formData, location: text})}
+                placeholder="Enter your location"
                 placeholderTextColor="#666"
               />
             </View>
           </View>
         </View>
+
+        {/* Info Text */}
+        <Text style={styles.infoText}>
+          Your personal information is used to personalize your experience and will not be shared with third parties.
+        </Text>
       </ScrollView>
     </View>
   );
@@ -193,7 +268,7 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: 12,
   },
   inputIcon: {
@@ -218,11 +293,27 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '500',
     padding: 0,
+    paddingVertical: 4,
+  },
+  disabledInput: {
+    color: '#666',
+  },
+  helperText: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 2,
   },
   divider: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.05)',
     marginLeft: 56,
+  },
+  infoText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 20,
+    lineHeight: 18,
+    textAlign: 'center',
   },
 });
 

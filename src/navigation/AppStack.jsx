@@ -6,11 +6,15 @@ import LenderProfileScreen from '../screens/profile/LenderProfileScreen';
 import RentBookingScreen from '../screens/rent/RentBookingScreen';
 import BookingDetailScreen from '../screens/rent/BookingDetailScreen';
 import BookingConfirmationScreen from '../screens/rent/BookingConfirmationScreen';
-import ProfileScreen from '../screens/profile/ProfileScreen'; 
+import ProfileScreen from '../screens/profile/ProfileScreen';
 import MyAdDetailScreen from '../screens/list/MyAdDetailScreen';
 import EditListingScreen from '../screens/list/EditListingScreen';
 import ChatScreen from '../screens/chat/ChatScren';
 import FavoritesScreen from '../screens/profile/FavoritesScreen';
+import EditProfileScreen from '../screens/profile/EditProfileScreen';
+import NotificationsScreen from '../screens/profile/NotificationsScreen';
+import PrivacySecurityScreen from '../screens/profile/PrivacySecurityScreen';
+import SettingsScreen from '../screens/profile/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -29,7 +33,13 @@ const AppStack = () => {
       <Stack.Screen name="MyAdDetail" component={MyAdDetailScreen} />
       <Stack.Screen name="EditListing" component={EditListingScreen} />
       <Stack.Screen name="ChatScreen" component={ChatScreen} />
+
+      {/* Profile Related Screens */}
       <Stack.Screen name="Favorites" component={FavoritesScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      <Stack.Screen name="PrivacySecurity" component={PrivacySecurityScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
     </Stack.Navigator>
   );
 };

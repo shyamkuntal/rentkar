@@ -25,8 +25,8 @@ const ProfileScreen = () => {
     { icon: <User size={22} color="#FFF" />, label: 'Personal Information', route: 'EditProfile' },
     { icon: <CreditCard size={22} color="#FFF" />, label: 'Payments & Payouts', route: 'Payments' },
     { icon: <Bell size={22} color="#FFF" />, label: 'Notifications', route: 'Notifications' },
-    { icon: <Shield size={22} color="#FFF" />, label: 'Privacy & Security', route: 'Privacy' },
-    { icon: <Heart size={22} color="#FFF" />, label: 'My Favorites', route: 'Favorites' }, // Changed route to Favorites
+    { icon: <Shield size={22} color="#FFF" />, label: 'Privacy & Security', route: 'PrivacySecurity' },
+    { icon: <Heart size={22} color="#FFF" />, label: 'My Favorites', route: 'Favorites' },
     { icon: <Settings size={22} color="#FFF" />, label: 'Settings', route: 'Settings' },
   ];
 
@@ -104,18 +104,10 @@ const ProfileScreen = () => {
               key={index}
               style={[styles.menuItem, index < menuItems.length - 1 && styles.menuItemBorder]}
               onPress={() => {
-                if (item.route === 'Favorites') {
-                  // Navigate to favorites if implemented, for now log or use what's available
-                  // Assuming specific screen or params on HomeScreen
-                  // navigation.navigate('Favorites');
-                  Alert.alert('Coming Soon', 'Favorites screen is under construction');
-                } else if (item.route === 'Settings') {
-                  navigation.navigate('Settings');
-                } else if (item.route === 'EditProfile') {
-                  navigation.navigate('EditProfile');
+                if (item.route === 'Payments') {
+                  Alert.alert('Coming Soon', 'Payments & Payouts feature is under development');
                 } else {
-                  // Default fallback
-                  Alert.alert('Coming Soon', 'This feature is under development');
+                  navigation.navigate(item.route);
                 }
               }}
             >

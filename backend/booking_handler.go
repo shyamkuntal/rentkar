@@ -166,6 +166,7 @@ func getMyBookings(w http.ResponseWriter, r *http.Request) {
 
 	type PopulatedBooking struct {
 		ID            primitive.ObjectID `json:"id" bson:"_id"`
+		TrackingID    string             `json:"trackingId" bson:"trackingId"`
 		ItemID        primitive.ObjectID `json:"itemId" bson:"itemId"`
 		RenterID      primitive.ObjectID `json:"renterId" bson:"renterId"`
 		OwnerID       primitive.ObjectID `json:"ownerId" bson:"ownerId"`
@@ -174,6 +175,9 @@ func getMyBookings(w http.ResponseWriter, r *http.Request) {
 		TotalAmount   float64            `json:"totalPrice" bson:"totalPrice"`
 		Status        string             `json:"status" bson:"status"`
 		PaymentStatus string             `json:"paymentStatus" bson:"paymentStatus"`
+		PickupAddress string             `json:"pickupAddress" bson:"pickupAddress"`
+		DropAddress   string             `json:"dropAddress" bson:"dropAddress"`
+		Notes         string             `json:"notes" bson:"notes"`
 		CreatedAt     time.Time          `json:"createdAt" bson:"createdAt"`
 		UpdatedAt     time.Time          `json:"updatedAt" bson:"updatedAt"`
 		Item          *Item              `json:"item,omitempty"`
@@ -184,6 +188,7 @@ func getMyBookings(w http.ResponseWriter, r *http.Request) {
 	for _, b := range bookings {
 		pb := PopulatedBooking{
 			ID:            b.ID,
+			TrackingID:    b.TrackingID,
 			ItemID:        b.ItemID,
 			RenterID:      b.RenterID,
 			OwnerID:       b.OwnerID,
@@ -192,6 +197,9 @@ func getMyBookings(w http.ResponseWriter, r *http.Request) {
 			TotalAmount:   b.TotalPrice,
 			Status:        b.Status,
 			PaymentStatus: b.PaymentStatus,
+			PickupAddress: b.PickupAddress,
+			DropAddress:   b.DropAddress,
+			Notes:         b.Notes,
 			CreatedAt:     b.CreatedAt,
 			UpdatedAt:     b.UpdatedAt,
 		}
@@ -199,7 +207,7 @@ func getMyBookings(w http.ResponseWriter, r *http.Request) {
 		// Populate item
 		var item Item
 		if err := itemCol.FindOne(ctx, bson.M{"_id": b.ItemID}).Decode(&item); err == nil {
-			pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category}
+			pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category, Location: item.Location}
 		}
 
 		// Populate owner
@@ -232,6 +240,7 @@ func getOwnerBookings(w http.ResponseWriter, r *http.Request) {
 
 	type PopulatedBooking struct {
 		ID            primitive.ObjectID `json:"id" bson:"_id"`
+		TrackingID    string             `json:"trackingId" bson:"trackingId"`
 		ItemID        primitive.ObjectID `json:"itemId" bson:"itemId"`
 		RenterID      primitive.ObjectID `json:"renterId" bson:"renterId"`
 		OwnerID       primitive.ObjectID `json:"ownerId" bson:"ownerId"`
@@ -253,6 +262,7 @@ func getOwnerBookings(w http.ResponseWriter, r *http.Request) {
 	for _, b := range bookings {
 		pb := PopulatedBooking{
 			ID:            b.ID,
+			TrackingID:    b.TrackingID,
 			ItemID:        b.ItemID,
 			RenterID:      b.RenterID,
 			OwnerID:       b.OwnerID,
@@ -271,7 +281,7 @@ func getOwnerBookings(w http.ResponseWriter, r *http.Request) {
 		// Populate item
 		var item Item
 		if err := itemCol.FindOne(ctx, bson.M{"_id": b.ItemID}).Decode(&item); err == nil {
-			pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category}
+			pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category, Location: item.Location}
 		}
 
 		// Populate renter
@@ -304,6 +314,7 @@ func getBooking(w http.ResponseWriter, r *http.Request, id string) {
 
 	type PopulatedBooking struct {
 		ID            primitive.ObjectID `json:"id" bson:"_id"`
+		TrackingID    string             `json:"trackingId" bson:"trackingId"`
 		ItemID        primitive.ObjectID `json:"itemId" bson:"itemId"`
 		RenterID      primitive.ObjectID `json:"renterId" bson:"renterId"`
 		OwnerID       primitive.ObjectID `json:"ownerId" bson:"ownerId"`
@@ -324,6 +335,7 @@ func getBooking(w http.ResponseWriter, r *http.Request, id string) {
 
 	pb := PopulatedBooking{
 		ID:            booking.ID,
+		TrackingID:    booking.TrackingID,
 		ItemID:        booking.ItemID,
 		RenterID:      booking.RenterID,
 		OwnerID:       booking.OwnerID,
@@ -341,7 +353,7 @@ func getBooking(w http.ResponseWriter, r *http.Request, id string) {
 
 	var item Item
 	if err := itemCol.FindOne(ctx, bson.M{"_id": booking.ItemID}).Decode(&item); err == nil {
-		pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category}
+		pb.Item = &Item{ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, Category: item.Category, Location: item.Location}
 	}
 
 	var owner User

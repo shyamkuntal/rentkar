@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, TextInput, Platform } from 'react-native';
 import { Calendar } from 'react-native-calendars';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ChevronLeft, Calendar as CalendarIcon, Info } from 'lucide-react-native';
+import { ChevronLeft, Calendar as CalendarIcon, Clock, Info } from 'lucide-react-native';
 import { createBooking } from '../../services/bookingService';
 
 const RentBookingScreen = () => {
@@ -17,10 +18,32 @@ const RentBookingScreen = () => {
 
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
+  const [startTime, setStartTime] = useState(new Date(new Date().setHours(10, 0, 0, 0)));
+  const [endTime, setEndTime] = useState(new Date(new Date().setHours(18, 0, 0, 0)));
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [pickupAddress, setPickupAddress] = useState('');
   const [dropAddress, setDropAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
+  const handleStartTimeChange = (event, selectedTime) => {
+    setShowStartTimePicker(Platform.OS === 'ios');
+    if (selectedTime) {
+      setStartTime(selectedTime);
+    }
+  };
+
+  const handleEndTimeChange = (event, selectedTime) => {
+    setShowEndTimePicker(Platform.OS === 'ios');
+    if (selectedTime) {
+      setEndTime(selectedTime);
+    }
+  };
 
   const handleDayPress = (day) => {
     if (!startDate || (startDate && endDate)) {
@@ -72,6 +95,13 @@ const RentBookingScreen = () => {
   const serviceFee = Math.round(totalPrice * 0.05);
   const grandTotal = totalPrice + serviceFee;
 
+  // Combine date and time into a single Date object
+  const combineDateAndTime = (dateString, time) => {
+    const date = new Date(dateString);
+    date.setHours(time.getHours(), time.getMinutes(), 0, 0);
+    return date;
+  };
+
   const handleConfirmBooking = async () => {
     if (!startDate || !endDate) return;
 
@@ -82,13 +112,16 @@ const RentBookingScreen = () => {
 
     setLoading(true);
     try {
+      const fullStartDate = combineDateAndTime(startDate, startTime);
+      const fullEndDate = combineDateAndTime(endDate, endTime);
+
       const bookingData = {
         itemId: product.id,
-        startDate: new Date(startDate).toISOString(),
-        endDate: new Date(endDate).toISOString(),
+        startDate: fullStartDate.toISOString(),
+        endDate: fullEndDate.toISOString(),
         totalPrice: grandTotal,
         pickupAddress,
-        dropAddress: dropAddress || pickupAddress, // Default to pickup if empty
+        dropAddress: dropAddress || pickupAddress,
         notes
       };
 
@@ -97,10 +130,8 @@ const RentBookingScreen = () => {
       navigation.replace('BookingConfirmation', {
         booking: {
           ...response.booking,
-          startDate,
-          endDate,
-          startDate,
-          endDate,
+          startDate: fullStartDate.toISOString(),
+          endDate: fullEndDate.toISOString(),
           totalAmount: grandTotal,
           pickupAddress,
           dropAddress: dropAddress || pickupAddress,
@@ -161,6 +192,55 @@ const RentBookingScreen = () => {
                 }}
             />
         </View>
+
+        {/* Time Selection */}
+        {startDate && endDate && (
+          <View style={styles.timeSection}>
+            <Text style={styles.sectionTitle}>Select Time</Text>
+            <View style={styles.timeRow}>
+              <View style={styles.timeBlock}>
+                <Text style={styles.timeLabel}>Pickup Time</Text>
+                <TouchableOpacity 
+                  style={styles.timeButton}
+                  onPress={() => setShowStartTimePicker(true)}
+                >
+                  <Clock size={18} color="#FF5A5F" />
+                  <Text style={styles.timeValue}>{formatTime(startTime)}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.timeBlock}>
+                <Text style={styles.timeLabel}>Return Time</Text>
+                <TouchableOpacity 
+                  style={styles.timeButton}
+                  onPress={() => setShowEndTimePicker(true)}
+                >
+                  <Clock size={18} color="#FF5A5F" />
+                  <Text style={styles.timeValue}>{formatTime(endTime)}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {showStartTimePicker && (
+          <DateTimePicker
+            value={startTime}
+            mode="time"
+            is24Hour={false}
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleStartTimeChange}
+          />
+        )}
+
+        {showEndTimePicker && (
+          <DateTimePicker
+            value={endTime}
+            mode="time"
+            is24Hour={false}
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleEndTimeChange}
+          />
+        )}
 
         <View style={styles.addressSection}>
              <Text style={styles.sectionTitle}>Details</Text>
@@ -294,6 +374,38 @@ const styles = StyleSheet.create({
   textArea: {
       minHeight: 80,
       textAlignVertical: 'top',
+  },
+  
+  // Time picker styles
+  timeSection: {
+    marginBottom: 20,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  timeBlock: {
+    flex: 1,
+  },
+  timeLabel: {
+    color: '#AAA',
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  timeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#25252A',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    gap: 10,
+  },
+  timeValue: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

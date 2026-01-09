@@ -47,7 +47,34 @@ func getFavorites(w http.ResponseWriter, r *http.Request) {
 	var favorites []Favorite
 	cursor.All(ctx, &favorites)
 
-	JSON(w, http.StatusOK, map[string]interface{}{"favorites": favorites, "total": len(favorites)})
+	// Populate item details for each favorite
+	itemCol := GetCollection("items")
+	type PopulatedFavorite struct {
+		ID        primitive.ObjectID `json:"id"`
+		Title     string             `json:"title"`
+		Images    []string           `json:"images"`
+		Price     float64            `json:"price"`
+		Category  string             `json:"category"`
+		Rating    float64            `json:"rating,omitempty"`
+		CreatedAt time.Time          `json:"createdAt"`
+	}
+
+	var populatedFavorites []PopulatedFavorite
+	for _, fav := range favorites {
+		var item Item
+		if err := itemCol.FindOne(ctx, bson.M{"_id": fav.ItemID}).Decode(&item); err == nil {
+			populatedFavorites = append(populatedFavorites, PopulatedFavorite{
+				ID:        item.ID,
+				Title:     item.Title,
+				Images:    item.Images,
+				Price:     item.Price,
+				Category:  item.Category,
+				CreatedAt: fav.CreatedAt,
+			})
+		}
+	}
+
+	JSON(w, http.StatusOK, map[string]interface{}{"favorites": populatedFavorites, "total": len(populatedFavorites)})
 }
 
 func addFavorite(w http.ResponseWriter, r *http.Request, itemID string) {
