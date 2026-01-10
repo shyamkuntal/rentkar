@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { View, Text, StyleSheet, FlatList, ScrollView, TextInput, Image, TouchableOpacity, Platform, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from '@react-native-community/blur';
 import { getItems } from '../../services/itemService';
 import { CATEGORIES } from '../../config/categories';
+import { AuthContext } from '../../context/AuthContext';
 import { getCategoryIcon } from '../../utils/categoryIcons';
 import ItemCard from '../../components/ItemCard';
 import GlassView from '../../components/GlassView';
@@ -40,7 +41,8 @@ CategoryBadge.displayName = 'CategoryBadge';
 const HomeScreen = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  
+  const { user } = useContext(AuthContext);
+
   // Pagination State
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,10 +50,10 @@ const HomeScreen = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
-  
+
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Ref to prevent multiple onEndReached calls
   const isLoadingMoreRef = useRef(false);
 
@@ -72,9 +74,9 @@ const HomeScreen = () => {
 
     try {
       const pageToFetch = reset ? 1 : page + 1;
-      const filters = { 
-        limit: 10, 
-        page: pageToFetch 
+      const filters = {
+        limit: 10,
+        page: pageToFetch
       };
 
       if (selectedCategory) filters.category = selectedCategory;
@@ -82,7 +84,7 @@ const HomeScreen = () => {
 
       const response = await getItems(filters);
       const newItems = response.items || [];
-      
+
       if (reset) {
         setItems(newItems);
         setPage(1);
@@ -95,7 +97,7 @@ const HomeScreen = () => {
         });
         setPage(pageToFetch);
       }
-      
+
       // If we got fewer items than limit, no more pages
       setHasMore(newItems.length >= 10);
 
@@ -148,41 +150,41 @@ const HomeScreen = () => {
 
   const renderListHeader = () => (
     <View>
-        {/* Categories Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Categories</Text>
-          <FlatList
-            data={CATEGORIES}
-            renderItem={renderCategory}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryList}
-            extraData={selectedCategory}
-          />
-        </View>
+      {/* Categories Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Categories</Text>
+        <FlatList
+          data={CATEGORIES}
+          renderItem={renderCategory}
+          keyExtractor={item => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryList}
+          extraData={selectedCategory}
+        />
+      </View>
 
-        {/* Recommended Header */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {selectedCategory || 'Recommended'}
-            </Text>
-            {selectedCategory && (
-              <TouchableOpacity onPress={() => setSelectedCategory(null)}>
-                <Text style={styles.clearFilter}>Clear</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+      {/* Recommended Header */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>
+            {selectedCategory || 'Recommended'}
+          </Text>
+          {selectedCategory && (
+            <TouchableOpacity onPress={() => setSelectedCategory(null)}>
+              <Text style={styles.clearFilter}>Clear</Text>
+            </TouchableOpacity>
+          )}
         </View>
-        
-        {/* Initial Loader (rendered here to avoid Full Screen overlay if preferred, or use logic below) */}
-        {loading && items.length === 0 && (
-             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#FF5A5F" />
-              <Text style={styles.loadingText}>Loading items...</Text>
-            </View>
-        )}
+      </View>
+
+      {/* Initial Loader (rendered here to avoid Full Screen overlay if preferred, or use logic below) */}
+      {loading && items.length === 0 && (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FF5A5F" />
+          <Text style={styles.loadingText}>Loading items...</Text>
+        </View>
+      )}
     </View>
   );
 
@@ -213,7 +215,7 @@ const HomeScreen = () => {
             onPress={() => navigation.navigate('Profile')}
           >
             <Image
-              source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }}
+              source={{ uri: user?.avatar || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user?.name || 'User') + '&background=FF5A5F&color=fff&size=80' }}
               style={styles.avatar}
             />
           </TouchableOpacity>
@@ -263,21 +265,21 @@ const HomeScreen = () => {
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.2}
         ListFooterComponent={
-            loadingMore ? (
+          loadingMore ? (
             <View style={{ paddingVertical: 20 }}>
-                <ActivityIndicator size="small" color="#FF5A5F" />
+              <ActivityIndicator size="small" color="#FF5A5F" />
             </View>
-            ) : <View style={{ height: 20 }} />
+          ) : <View style={{ height: 20 }} />
         }
         ListEmptyComponent={!loading && items.length === 0 && (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No items found</Text>
-              <Text style={styles.emptySubtext}>
-                {searchQuery || selectedCategory
-                  ? 'Try adjusting your search or filters'
-                  : 'Be the first to list an item!'}
-              </Text>
-            </View>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No items found</Text>
+            <Text style={styles.emptySubtext}>
+              {searchQuery || selectedCategory
+                ? 'Try adjusting your search or filters'
+                : 'Be the first to list an item!'}
+            </Text>
+          </View>
         )}
         refreshControl={
           <RefreshControl
