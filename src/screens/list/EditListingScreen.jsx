@@ -1,35 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Image, KeyboardAvoidingView, Platform, Alert, Modal, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ChevronLeft, Camera, X, Check, Laptop, Car, Shirt, Home as HomeIcon, Dumbbell } from 'lucide-react-native';
+import { ChevronLeft, Camera, X, Check, ChevronDown } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
 import { updateItem } from '../../services/itemService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CATEGORIES } from '../../config/categories';
+import { getCategoryIcon } from '../../utils/categoryIcons';
+
+// Helper to find case-insensitive match in array (defined outside component)
+const findMatch = (arr, val) => {
+    if (!val || !arr) return val;
+    
+    // Handle "SubCategory - Brand" format (extract just the subcategory name)
+    const baseName = val.includes(' - ') ? val.split(' - ')[0].trim() : val;
+    
+    const match = arr.find(item => {
+        const itemStr = typeof item === 'object' ? item.name : item;
+        return itemStr.toLowerCase() === baseName.toLowerCase();
+    });
+    return match ? (typeof match === 'object' ? match.name : match) : val;
+};
 
 const EditListingScreen = () => {
     const navigation = useNavigation();
     const route = useRoute();
     const { listing } = route.params;
     const insets = useSafeAreaInsets();
-
-    // Data for Categories
-    const categories = [
-        { id: '1', name: 'Electronics', icon: Laptop },
-        { id: '2', name: 'Vehicles', icon: Car },
-        { id: '3', name: 'Fashion', icon: Shirt },
-        { id: '4', name: 'Home & Garden', icon: HomeIcon },
-        { id: '5', name: 'Sports', icon: Dumbbell },
-    ];
-
-    const subCategories = {
-        'Electronics': ['Mobile Phones', 'Laptops', 'Cameras', 'Audio', 'Drones'],
-        'Vehicles': ['Cars', 'Bikes', 'Scooters', 'Accessories'],
-        'Fashion': ['Men', 'Women', 'Kids', 'Watches', 'Shoes'],
-        'Home & Garden': ['Furniture', 'Decor', 'Tools', 'Garden'],
-        'Sports': ['Gym Equipment', 'Camping', 'Cycling', 'Team Sports'],
-    };
 
     // Initialize state with existing listing data
     const [title, setTitle] = useState(listing.title || '');
@@ -43,21 +42,107 @@ const EditListingScreen = () => {
         : (listing.image ? [listing.image] : []);
     const [images, setImages] = useState(initialImages);
 
-    const [category, setCategory] = useState(listing.category || null);
-    const [subCategory, setSubCategory] = useState(listing.subCategory || null);
+    // Calculate initial values synchronously using useMemo so they are available for useState
+    const initialValues = useMemo(() => {
+        // 1. Category
+        let initCategory = listing.category;
+        const catMatch = CATEGORIES.find(c => c.name.toLowerCase() === (initCategory || '').toLowerCase());
+        if (catMatch) initCategory = catMatch.name;
+
+        // 2. SubCategory
+        let initSubCategory = listing.subCategory;
+        let finalSubCategory = initSubCategory;
+        
+        if (initCategory) {
+            const catObj = CATEGORIES.find(c => c.name === initCategory);
+            if (catObj?.subCategories) {
+                finalSubCategory = findMatch(catObj.subCategories, initSubCategory);
+            }
+        }
+
+        // 3. Brand
+        let initBrand = listing.brand;
+        if (!initBrand && listing.attributes && typeof listing.attributes === 'object') {
+            const brandKeys = Object.keys(listing.attributes).filter(k => 
+                k.toLowerCase().includes('brand') || k.toLowerCase().includes('type') || k.toLowerCase().includes('company')
+            );
+            if (brandKeys.length > 0) initBrand = listing.attributes[brandKeys[0]];
+        }
+        
+        let finalBrand = initBrand;
+        if (initCategory && finalSubCategory) {
+            const catObj = CATEGORIES.find(c => c.name === initCategory);
+            const subObj = catObj?.subCategories?.find(s => (typeof s === 'object' ? s.name : s) === finalSubCategory);
+            if (subObj && typeof subObj === 'object' && subObj.data) {
+                finalBrand = findMatch(subObj.data, initBrand);
+            }
+        }
+
+        // 4. Model
+        let initModel = listing.model;
+        if (!initModel && listing.attributes && typeof listing.attributes === 'object') {
+            const modelKeys = Object.keys(listing.attributes).filter(k => 
+                k.toLowerCase().includes('model')
+            );
+            if (modelKeys.length > 0) initModel = listing.attributes[modelKeys[0]];
+        }
+
+        return {
+            category: initCategory,
+            subCategory: finalSubCategory,
+            brand: finalBrand || '',
+            model: initModel || ''
+        };
+    }, [listing]);
+
+    const [category, setCategory] = useState(initialValues.category);
+    const [subCategory, setSubCategory] = useState(initialValues.subCategory);
+    const [brand, setBrand] = useState(initialValues.brand);
+    const [model, setModel] = useState(initialValues.model);
 
     const [loading, setLoading] = useState(false);
     const [successModalVisible, setSuccessModalVisible] = useState(false);
 
+    // Get current category object
+    const currentCategoryObj = useMemo(() => {
+        return CATEGORIES.find(c => c.name === category);
+    }, [category]);
+
+    // Get subcategories for current category
+    const currentSubCategories = useMemo(() => {
+        if (!currentCategoryObj) return [];
+        return currentCategoryObj.subCategories || [];
+    }, [currentCategoryObj]);
+
+    // Get current subcategory object
+    const currentSubCategoryObj = useMemo(() => {
+        if (!subCategory || !currentSubCategories.length) return null;
+        return currentSubCategories.find(sc => 
+            (typeof sc === 'object' ? sc.name : sc) === subCategory
+        );
+    }, [subCategory, currentSubCategories]);
+
+    // Get brands/types for current subcategory
+    const currentBrands = useMemo(() => {
+        if (!currentSubCategoryObj || typeof currentSubCategoryObj !== 'object') return [];
+        return currentSubCategoryObj.data || [];
+    }, [currentSubCategoryObj]);
+
+    // Get models for current brand (if brand is an object with data)
+    const currentModels = useMemo(() => {
+        if (!brand || !currentBrands.length) return [];
+        const brandObj = currentBrands.find(b => (typeof b === 'object' ? b.name : b) === brand);
+        if (brandObj && typeof brandObj === 'object' && brandObj.data) {
+            return brandObj.data;
+        }
+        return [];
+    }, [brand, currentBrands]);
+
     // Mock images pool
     const mockImages = [
-        'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1000', // Camera
-        'https://images.unsplash.com/photo-1579829366248-204da8419767?q=80&w=1000&auto=format&fit=crop', // Laptop
-        'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=1000', // Headphones
-        'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=1000', // Shoes
-        'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=1000', // Polaroid
-        'https://images.unsplash.com/photo-1581235720704-06d3acfcb36f?auto=format&fit=crop&q=80&w=1000', // Furniture
-        'https://images.unsplash.com/photo-1503376763036-066120622c74?auto=format&fit=crop&q=80&w=1000', // Car
+        'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1000',
+        'https://images.unsplash.com/photo-1579829366248-204da8419767?q=80&w=1000&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=1000',
     ];
 
     const handleSave = async () => {
@@ -75,6 +160,8 @@ const EditListingScreen = () => {
                 location,
                 category,
                 subCategory,
+                brand,
+                model,
                 images
             };
 
@@ -94,7 +181,6 @@ const EditListingScreen = () => {
     };
 
     const handleImageSelect = () => {
-        // Pick random image
         const randomImage = mockImages[Math.floor(Math.random() * mockImages.length)];
         setImages([...images, randomImage]);
     };
@@ -105,43 +191,120 @@ const EditListingScreen = () => {
         setImages(newImages);
     };
 
-    // Category Selector Component (Simple Horizontal Scroll)
+    const handleCategoryChange = (catName) => {
+        setCategory(catName);
+        setSubCategory(null);
+        setBrand('');
+        setModel('');
+    };
+
+    const handleSubCategoryChange = (subCatName) => {
+        setSubCategory(subCatName);
+        setBrand('');
+        setModel('');
+    };
+
+    const handleBrandChange = (brandName) => {
+        setBrand(brandName);
+        setModel('');
+    };
+
+    // Render Category Selector with Icons
     const renderCategorySelector = () => (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
-            {categories.map((cat) => {
+            {CATEGORIES.map((cat) => {
                 const isSelected = category === cat.name;
-                const Icon = cat.icon;
+                const IconComponent = getCategoryIcon(cat.name);
                 return (
                     <TouchableOpacity
                         key={cat.id}
                         style={[styles.catChip, isSelected && styles.catChipSelected]}
-                        onPress={() => { setCategory(cat.name); setSubCategory(null); }}
+                        onPress={() => handleCategoryChange(cat.name)}
                     >
-                        <Icon size={16} color={isSelected ? '#FFF' : '#888'} />
-                        <Text style={[styles.catChipText, isSelected && styles.catChipTextSelected]}>{cat.name}</Text>
+                        <IconComponent size={16} color={isSelected ? '#FFF' : '#888'} />
+                        <Text style={[styles.catChipText, isSelected && styles.catChipTextSelected]} numberOfLines={1}>
+                            {cat.name}
+                        </Text>
                     </TouchableOpacity>
                 );
             })}
         </ScrollView>
     );
 
+    // Render SubCategory Selector
     const renderSubCategorySelector = () => {
-        if (!category || !subCategories[category]) return null;
+        if (!category || !currentSubCategories.length) return null;
         return (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
-                {subCategories[category].map((sub, idx) => {
-                    const isSelected = subCategory === sub;
-                    return (
-                        <TouchableOpacity
-                            key={idx}
-                            style={[styles.catChip, isSelected && styles.catChipSelected]}
-                            onPress={() => setSubCategory(sub)}
-                        >
-                            <Text style={[styles.catChipText, isSelected && styles.catChipTextSelected]}>{sub}</Text>
-                        </TouchableOpacity>
-                    );
-                })}
-            </ScrollView>
+            <>
+                <Text style={styles.label}>Sub-Category</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
+                    {currentSubCategories.map((sub, idx) => {
+                        const subName = typeof sub === 'object' ? sub.name : sub;
+                        const isSelected = subCategory === subName;
+                        return (
+                            <TouchableOpacity
+                                key={idx}
+                                style={[styles.catChip, isSelected && styles.catChipSelected]}
+                                onPress={() => handleSubCategoryChange(subName)}
+                            >
+                                <Text style={[styles.catChipText, isSelected && styles.catChipTextSelected]}>{subName}</Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </ScrollView>
+            </>
+        );
+    };
+
+    // Render Brand/Type Selector
+    const renderBrandSelector = () => {
+        if (!subCategory || !currentBrands.length) return null;
+        const label = currentSubCategoryObj?.label || 'Brand';
+        return (
+            <>
+                <Text style={styles.label}>{label}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
+                    {currentBrands.map((b, idx) => {
+                        const brandName = typeof b === 'object' ? b.name : b;
+                        const isSelected = brand === brandName;
+                        return (
+                            <TouchableOpacity
+                                key={idx}
+                                style={[styles.catChip, isSelected && styles.catChipSelected]}
+                                onPress={() => handleBrandChange(brandName)}
+                            >
+                                <Text style={[styles.catChipText, isSelected && styles.catChipTextSelected]}>{brandName}</Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </ScrollView>
+            </>
+        );
+    };
+
+    // Render Model Selector
+    const renderModelSelector = () => {
+        if (!brand || !currentModels.length) return null;
+        const brandObj = currentBrands.find(b => (typeof b === 'object' ? b.name : b) === brand);
+        const label = (brandObj && typeof brandObj === 'object' && brandObj.label) || 'Model';
+        return (
+            <>
+                <Text style={styles.label}>{label}</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
+                    {currentModels.map((m, idx) => {
+                        const isSelected = model === m;
+                        return (
+                            <TouchableOpacity
+                                key={idx}
+                                style={[styles.catChip, isSelected && styles.catChipSelected]}
+                                onPress={() => setModel(m)}
+                            >
+                                <Text style={[styles.catChipText, isSelected && styles.catChipTextSelected]}>{m}</Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </ScrollView>
+            </>
         );
     };
 
@@ -176,18 +339,16 @@ const EditListingScreen = () => {
                             value={title}
                             onChangeText={setTitle}
                             placeholderTextColor="#666"
+                            placeholder="What are you renting?"
                         />
                     </GlassView>
 
                     <Text style={styles.label}>Category</Text>
                     {renderCategorySelector()}
 
-                    {category && (
-                        <>
-                            <Text style={styles.label}>Sub-Category</Text>
-                            {renderSubCategorySelector()}
-                        </>
-                    )}
+                    {renderSubCategorySelector()}
+                    {renderBrandSelector()}
+                    {renderModelSelector()}
 
                     <Text style={styles.label}>Daily Price (₹)</Text>
                     <GlassView style={styles.inputWrapper} borderRadius={12}>
@@ -197,6 +358,7 @@ const EditListingScreen = () => {
                             onChangeText={setPrice}
                             keyboardType="numeric"
                             placeholderTextColor="#666"
+                            placeholder="0"
                         />
                     </GlassView>
 
@@ -221,6 +383,7 @@ const EditListingScreen = () => {
                             numberOfLines={6}
                             textAlignVertical="top"
                             placeholderTextColor="#666"
+                            placeholder="Describe your item..."
                         />
                     </GlassView>
 
@@ -243,6 +406,7 @@ const EditListingScreen = () => {
                         </TouchableOpacity>
                     </View>
 
+                    <View style={{ height: 50 }} />
                 </KeyboardAvoidingView>
             </ScrollView>
 
@@ -280,7 +444,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingBottom: 20,
-        backgroundColor: 'rgba(0,0,0,0.2)', // Slight bg for header
+        backgroundColor: 'rgba(0,0,0,0.2)',
     },
     headerTitle: { fontSize: 18, fontWeight: '600', color: '#FFF' },
     backButton: {
@@ -294,7 +458,7 @@ const styles = StyleSheet.create({
     saveText: { color: colors.primary, fontSize: 16, fontWeight: '600' },
 
     content: { padding: 20, paddingBottom: 50 },
-    label: { color: '#888', marginBottom: 8, marginTop: 20, fontSize: 14, fontWeight: '500' },
+    label: { color: '#888', marginBottom: 8, marginTop: 16, fontSize: 14, fontWeight: '500' },
     inputWrapper: { width: '100%', backgroundColor: 'rgba(255,255,255,0.05)' },
     input: {
         padding: 16,
@@ -308,11 +472,11 @@ const styles = StyleSheet.create({
     catChip: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 16,
+        paddingHorizontal: 14,
         paddingVertical: 10,
         borderRadius: 20,
         backgroundColor: 'rgba(255,255,255,0.05)',
-        marginRight: 10,
+        marginRight: 8,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
     },
@@ -320,7 +484,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255, 90, 95, 0.15)',
         borderColor: '#FF5A5F',
     },
-    catChipText: { color: '#888', marginLeft: 6, fontSize: 14 },
+    catChipText: { color: '#888', marginLeft: 6, fontSize: 13 },
     catChipTextSelected: { color: '#FFF', fontWeight: '600' },
 
     // Photos

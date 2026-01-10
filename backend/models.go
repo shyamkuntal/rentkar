@@ -31,6 +31,9 @@ type Item struct {
 	Description string             `json:"description" bson:"description"`
 	Category    string             `json:"category" bson:"category"`
 	SubCategory string             `json:"subCategory" bson:"subCategory"`
+	Brand       string             `json:"brand,omitempty" bson:"brand,omitempty"`
+	Model       string             `json:"model,omitempty" bson:"model,omitempty"`
+	Attributes  map[string]string  `json:"attributes,omitempty" bson:"attributes,omitempty"`
 	Price       float64            `json:"price" bson:"price"`
 	Location    string             `json:"location" bson:"location"`
 	Images      []string           `json:"images" bson:"images"`

@@ -63,7 +63,7 @@ const ProductDetailsScreen = () => {
   const [item, setItem] = useState(product);
 
   const isOwner = user?.id === item?.owner?.id;
-  
+
   useEffect(() => {
     if (product?.id) {
       checkFavoriteStatus();
@@ -74,7 +74,7 @@ const ProductDetailsScreen = () => {
 
   const fetchFullItemDetails = async () => {
     try {
-      const { getItemById } = require('../../services/itemService'); 
+      const { getItemById } = require('../../services/itemService');
       const response = await getItemById(product.id);
       if (response && response.item) {
         setItem(response.item);
@@ -167,7 +167,7 @@ const ProductDetailsScreen = () => {
       >
         {/* Product Image Slider */}
         <View style={styles.imageContainer}>
-          <ImageSlider 
+          <ImageSlider
             images={item.images?.length > 0 ? item.images : [item.image || 'https://via.placeholder.com/400']}
             height={height * 0.45}
             showButtons={true}
@@ -195,6 +195,28 @@ const ProductDetailsScreen = () => {
               <Star size={14} color="#FFD700" fill="#FFD700" />
               <Text style={styles.ratingText}> {item.rating ? `${Number(item.rating).toFixed(1)}/5` : 'New'} ({item.reviews || 0} reviews)</Text>
             </View>
+          </View>
+
+          {/* Category & Brand/Model Details */}
+          <View style={styles.detailsRow}>
+            {item.category && (
+              <View style={styles.detailChip}>
+                <Text style={styles.detailChipLabel}>Category</Text>
+                <Text style={styles.detailChipValue} numberOfLines={1}>{item.category}</Text>
+              </View>
+            )}
+            {item.brand && (
+              <View style={styles.detailChip}>
+                <Text style={styles.detailChipLabel}>Brand</Text>
+                <Text style={styles.detailChipValue} numberOfLines={1}>{item.brand}</Text>
+              </View>
+            )}
+            {item.model && (
+              <View style={styles.detailChip}>
+                <Text style={styles.detailChipLabel}>Model</Text>
+                <Text style={styles.detailChipValue} numberOfLines={1}>{item.model}</Text>
+              </View>
+            )}
           </View>
 
           {/* Owner Profile Card */}
@@ -285,7 +307,7 @@ const ProductDetailsScreen = () => {
               <Share2 size={22} color="#FFF" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.roundButton} onPress={toggleFavorite}>
-               <Heart size={22} color={isFavorite ? "#FF5A5F" : "#FFF"} fill={isFavorite ? "#FF5A5F" : "transparent"} />
+              <Heart size={22} color={isFavorite ? "#FF5A5F" : "#FFF"} fill={isFavorite ? "#FF5A5F" : "transparent"} />
             </TouchableOpacity>
           </View>
         </View>
@@ -601,6 +623,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 8,
     lineHeight: 18,
+  },
+  // Details row for Category/Brand/Model
+  detailsRow: {
+    flexDirection: 'row',
+    marginTop: 16,
+    marginBottom: 16,
+    gap: 10,
+  },
+  detailChip: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  detailChipLabel: {
+    color: '#888',
+    fontSize: 10,
+    marginBottom: 2,
+  },
+  detailChipValue: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 

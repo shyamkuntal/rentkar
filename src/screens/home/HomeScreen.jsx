@@ -1,94 +1,124 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, ScrollView, TextInput, Image, TouchableOpacity, Platform, ActivityIndicator, RefreshControl } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from '@react-native-community/blur';
 import { getItems } from '../../services/itemService';
-import { categories } from '../../data/categories';
+import { CATEGORIES } from '../../config/categories';
+import { getCategoryIcon } from '../../utils/categoryIcons';
 import ItemCard from '../../components/ItemCard';
 import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
-import { Laptop, Car, Building2, Shirt, Dumbbell, Search, Filter, User, MapPin, Home as HomeIcon } from 'lucide-react-native';
+import { Search, Filter, MapPin } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// Icon map outside component to ensure stability
-const CATEGORY_ICONS = {
-  'Electronics': Laptop,
-  'Vehicles': Car,
-  'Home & Garden': HomeIcon,
-  'Fashion': Shirt,
-  'Sports': Dumbbell,
-};
-
-// Simplified CategoryBadge component without BlurView for reliable icon rendering
-const CategoryBadge = React.memo(({ category, isSelected, onPress }) => {
-  const IconComponent = CATEGORY_ICONS[category.name] || Laptop;
-  const iconProps = { size: 22, color: '#FFF', strokeWidth: 1.5 };
+// CategoryBadge component using shared icon utility
+const CategoryBadge = ({ category, isSelected, onPress }) => {
+  const IconComponent = React.useMemo(() => getCategoryIcon(category.name), [category.name]);
 
   return (
     <TouchableOpacity
-      style={[styles.categoryBadge, isSelected && styles.categoryBadgeSelected]}
+      style={styles.categoryBadge}
       onPress={onPress}
       activeOpacity={0.8}
     >
-      {/* Simplified glass effect - no BlurView to prevent icon rendering issues */}
+      {/* Simplified glass effect */}
       <View style={styles.categoryBackground} />
       <View style={styles.categoryGlassTint} />
       <View style={styles.categoryShine} />
-      <View style={styles.categoryBorder} />
+      <View style={[styles.categoryBorder, isSelected && styles.categoryBorderSelected]} />
 
       <View style={styles.categoryContent}>
-        <IconComponent {...iconProps} />
-        <Text style={styles.categoryText}>{category.name}</Text>
+        <IconComponent size={20} color="#FFF" strokeWidth={1.5} />
+        <Text style={styles.categoryText} numberOfLines={2}>{category.name}</Text>
       </View>
     </TouchableOpacity>
   );
-}, (prevProps, nextProps) => {
-  return prevProps.isSelected === nextProps.isSelected && 
-         prevProps.category.id === nextProps.category.id;
-});
+};
 
 CategoryBadge.displayName = 'CategoryBadge';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
+  
+  // Pagination State
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Ref to prevent multiple onEndReached calls
+  const isLoadingMoreRef = useRef(false);
 
   useEffect(() => {
-    loadItems();
+    loadItems(true);
   }, [selectedCategory, searchQuery]);
 
-  const loadItems = async () => {
-    try {
+  const loadItems = async (reset = false) => {
+    if (reset) {
       setLoading(true);
-      const filters = {};
+      setPage(1);
+      setHasMore(true);
+    } else {
+      if (!hasMore || isLoadingMoreRef.current) return;
+      isLoadingMoreRef.current = true;
+      setLoadingMore(true);
+    }
 
-      if (selectedCategory) {
-        filters.category = selectedCategory;
-      }
+    try {
+      const pageToFetch = reset ? 1 : page + 1;
+      const filters = { 
+        limit: 10, 
+        page: pageToFetch 
+      };
 
-      if (searchQuery) {
-        filters.search = searchQuery;
-      }
+      if (selectedCategory) filters.category = selectedCategory;
+      if (searchQuery) filters.search = searchQuery;
 
       const response = await getItems(filters);
-      setItems(response.items || []);
+      const newItems = response.items || [];
+      
+      if (reset) {
+        setItems(newItems);
+        setPage(1);
+      } else {
+        // Filter out items that are already in the list
+        setItems(prev => {
+          const existingIds = new Set(prev.map(i => i.id));
+          const uniqueNewItems = newItems.filter(i => !existingIds.has(i.id));
+          return [...prev, ...uniqueNewItems];
+        });
+        setPage(pageToFetch);
+      }
+      
+      // If we got fewer items than limit, no more pages
+      setHasMore(newItems.length >= 10);
+
     } catch (error) {
       console.error('Error loading items:', error);
-      setItems([]);
+      if (reset) setItems([]);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+      setRefreshing(false);
+      isLoadingMoreRef.current = false;
     }
   };
 
-  const onRefresh = async () => {
+  const onRefresh = () => {
     setRefreshing(true);
-    await loadItems();
-    setRefreshing(false);
+    loadItems(true);
+  };
+
+  const handleLoadMore = () => {
+    if (!loading && hasMore && !isLoadingMoreRef.current) {
+      loadItems(false);
+    }
   };
 
   const handleCategoryPress = (category) => {
@@ -116,6 +146,46 @@ const HomeScreen = () => {
     </View>
   );
 
+  const renderListHeader = () => (
+    <View>
+        {/* Categories Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Categories</Text>
+          <FlatList
+            data={CATEGORIES}
+            renderItem={renderCategory}
+            keyExtractor={item => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryList}
+            extraData={selectedCategory}
+          />
+        </View>
+
+        {/* Recommended Header */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>
+              {selectedCategory || 'Recommended'}
+            </Text>
+            {selectedCategory && (
+              <TouchableOpacity onPress={() => setSelectedCategory(null)}>
+                <Text style={styles.clearFilter}>Clear</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+        
+        {/* Initial Loader (rendered here to avoid Full Screen overlay if preferred, or use logic below) */}
+        {loading && items.length === 0 && (
+             <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#FF5A5F" />
+              <Text style={styles.loadingText}>Loading items...</Text>
+            </View>
+        )}
+    </View>
+  );
+
   return (
     <View style={styles.container}>
       {/* Background Gradient */}
@@ -124,7 +194,7 @@ const HomeScreen = () => {
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Header */}
+      {/* Header (Top Bar + Search) */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerTop}>
           <View>
@@ -160,6 +230,7 @@ const HomeScreen = () => {
           ) : (
             <View style={styles.searchAndroidBlur} />
           )}
+
           <View style={styles.searchTint} />
           <View style={styles.searchShine} />
           <View style={styles.searchBorder} />
@@ -180,51 +251,25 @@ const HomeScreen = () => {
         </View>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
+      {/* Main Content FlatList */}
+      <FlatList
+        data={items}
+        renderItem={renderItem}
+        keyExtractor={item => item.id.toString()}
+        numColumns={2}
+        columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#FF5A5F"
-            colors={['#FF5A5F']}
-          />
-        }
-      >
-        {/* Categories */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Categories</Text>
-          <FlatList
-            data={categories}
-            renderItem={renderCategory}
-            keyExtractor={item => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryList}
-            extraData={selectedCategory}
-          />
-        </View>
-
-        {/* Recommended Items */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {selectedCategory || 'Recommended'}
-            </Text>
-            {selectedCategory && (
-              <TouchableOpacity onPress={() => setSelectedCategory(null)}>
-                <Text style={styles.clearFilter}>Clear</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#FF5A5F" />
-              <Text style={styles.loadingText}>Loading items...</Text>
+        ListHeaderComponent={renderListHeader}
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.2}
+        ListFooterComponent={
+            loadingMore ? (
+            <View style={{ paddingVertical: 20 }}>
+                <ActivityIndicator size="small" color="#FF5A5F" />
             </View>
-          ) : items.length === 0 ? (
+            ) : <View style={{ height: 20 }} />
+        }
+        ListEmptyComponent={!loading && items.length === 0 && (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No items found</Text>
               <Text style={styles.emptySubtext}>
@@ -233,18 +278,17 @@ const HomeScreen = () => {
                   : 'Be the first to list an item!'}
               </Text>
             </View>
-          ) : (
-            <FlatList
-              data={items}
-              renderItem={renderItem}
-              keyExtractor={item => item.id.toString()}
-              numColumns={2}
-              scrollEnabled={false}
-              columnWrapperStyle={styles.columnWrapper}
-            />
-          )}
-        </View>
-      </ScrollView>
+        )}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#FF5A5F"
+            colors={['#FF5A5F']}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      />
     </View>
   );
 };
@@ -387,22 +431,22 @@ const styles = StyleSheet.create({
     paddingRight: 20,
   },
   categoryBadge: {
-    width: 90,
-    height: 90,
-    borderRadius: 20,
-    marginRight: 12,
+    width: 72,
+    height: 72,
+    borderRadius: 16,
+    marginRight: 10,
     overflow: 'hidden',
     // Shadow
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 3,
   },
   categoryBackground: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(30, 30, 35, 0.95)',
-    borderRadius: 20,
+    borderRadius: 16,
   },
   categoryGlassTint: {
     ...StyleSheet.absoluteFill,
@@ -410,7 +454,7 @@ const styles = StyleSheet.create({
   },
   categoryShine: {
     ...StyleSheet.absoluteFill,
-    borderRadius: 20,
+    borderRadius: 16,
     borderTopWidth: 1,
     borderLeftWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.2)',
@@ -420,26 +464,26 @@ const styles = StyleSheet.create({
   },
   categoryBorder: {
     ...StyleSheet.absoluteFill,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  categoryBorderSelected: {
+    borderColor: '#FF5A5F',
+    borderWidth: 2,
   },
   categoryContent: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
-    gap: 8,
+    gap: 4,
   },
   categoryText: {
     color: '#FFF',
     fontWeight: '500',
-    fontSize: 11,
+    fontSize: 9,
     textAlign: 'center',
-  },
-  categoryBadgeSelected: {
-    borderColor: '#FF5A5F',
-    borderWidth: 2,
   },
 
   // Loading & Empty States
@@ -478,9 +522,11 @@ const styles = StyleSheet.create({
   // Items Grid
   columnWrapper: {
     justifyContent: 'space-between',
+    paddingHorizontal: 16,
   },
   itemCardWrapper: {
     width: '48%',
+    marginBottom: 8,
   },
 });
 

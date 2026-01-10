@@ -53,8 +53,14 @@ func HandlePendingRequestsCount(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Count bookings where user is owner and status is pending
-	count, err := collection.CountDocuments(ctx, bson.M{"ownerId": userID, "status": "pending"})
+	// Count bookings where user is owner, status is pending, AND start date hasn't passed yet
+	// (Pending bookings whose startDate has passed are considered "expired" and should not be counted)
+	now := time.Now()
+	count, err := collection.CountDocuments(ctx, bson.M{
+		"ownerId":   userID,
+		"status":    "pending",
+		"startDate": bson.M{"$gte": now}, // Only future pending bookings
+	})
 	if err != nil {
 		JSONError(w, http.StatusInternalServerError, "Failed to count pending requests")
 		return
@@ -229,7 +235,8 @@ func getMyBookings(w http.ResponseWriter, r *http.Request) {
 		if err := itemCol.FindOne(ctx, bson.M{"_id": b.ItemID}).Decode(&item); err == nil {
 			pb.Item = &Item{
 				ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price,
-				Category: item.Category, Location: item.Location, Description: item.Description,
+				Category: item.Category, SubCategory: item.SubCategory, Brand: item.Brand, Model: item.Model,
+				Attributes: item.Attributes, Location: item.Location, Description: item.Description,
 				Rating: item.Rating, Reviews: item.Reviews,
 			}
 		}
@@ -310,7 +317,8 @@ func getOwnerBookings(w http.ResponseWriter, r *http.Request) {
 		if err := itemCol.FindOne(ctx, bson.M{"_id": b.ItemID}).Decode(&item); err == nil {
 			pb.Item = &Item{
 				ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price,
-				Category: item.Category, Location: item.Location, Description: item.Description,
+				Category: item.Category, SubCategory: item.SubCategory, Brand: item.Brand, Model: item.Model,
+				Attributes: item.Attributes, Location: item.Location, Description: item.Description,
 				Rating: item.Rating, Reviews: item.Reviews,
 			}
 		}
@@ -389,7 +397,8 @@ func getBooking(w http.ResponseWriter, r *http.Request, id string) {
 	if err := itemCol.FindOne(ctx, bson.M{"_id": booking.ItemID}).Decode(&item); err == nil {
 		pb.Item = &Item{
 			ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price,
-			Category: item.Category, Location: item.Location, Description: item.Description,
+			Category: item.Category, SubCategory: item.SubCategory, Brand: item.Brand, Model: item.Model,
+			Attributes: item.Attributes, Location: item.Location, Description: item.Description,
 			Rating: item.Rating, Reviews: item.Reviews,
 		}
 	}

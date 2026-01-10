@@ -334,6 +334,13 @@ const BookingDetailScreen = () => {
                     />
                     <View style={styles.itemInfo}>
                         <Text style={styles.itemTitle}>{product.title}</Text>
+                        
+                         {(product.brand || product.model) && (
+                            <Text style={{color: '#AAA', fontSize: 12, marginBottom: 4}} numberOfLines={1}>
+                                {product.brand}{product.model ? ` • ${product.model}` : ''}
+                            </Text>
+                        )}
+
                         <View style={styles.locationRow}>
                             <MapPin size={12} color="#FF5A5F" />
                             <Text style={styles.locationText} numberOfLines={1}>{booking.pickupAddress || product.location || 'N/A'}</Text>

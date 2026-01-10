@@ -113,6 +113,12 @@ const MyListingsScreen = () => {
               <MoreHorizontal size={20} color="#888" />
             </TouchableOpacity>
           </View>
+          
+           {(item.brand || item.model) && (
+              <Text style={{color: '#AAA', fontSize: 12, marginBottom: 8}} numberOfLines={1}>
+                {item.brand}{item.model ? ` • ${item.model}` : ''}
+              </Text>
+            )}
 
           <Text style={styles.price}>₹{item.price}<Text style={styles.perDay}>/day</Text></Text>
 

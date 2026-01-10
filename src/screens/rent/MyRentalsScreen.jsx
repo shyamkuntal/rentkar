@@ -154,6 +154,13 @@ const MyRentalsScreen = () => {
             <Image source={{ uri: imageUri }} style={styles.prodImage} />
             <View style={styles.info}>
               <Text style={styles.title} numberOfLines={2}>{product.title || 'Item Unavailable'}</Text>
+
+              {(product.brand || product.model) && (
+                <Text style={{ color: '#AAA', fontSize: 12, marginBottom: 4 }} numberOfLines={1}>
+                  {product.brand}{product.model ? ` • ${product.model}` : ''}
+                </Text>
+              )}
+
               <View style={styles.dateRow}>
                 <Calendar size={14} color="#888" />
                 <Text style={styles.dateText}>{startDate} - {endDate}</Text>

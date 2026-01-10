@@ -1,7 +1,11 @@
 import React, { useState, useCallback, useContext } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Image, Platform, KeyboardAvoidingView, Alert, Modal, ActivityIndicator } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { ChevronLeft, ChevronRight, Upload, Check, Camera, MapPin, Laptop, Car, Shirt, Home as HomeIcon, Dumbbell, X, Plus } from 'lucide-react-native';
+import {
+    ChevronLeft, ChevronRight, Upload, Check, Camera, MapPin, X, Plus,
+    Car, Laptop, Shirt, Home, Dumbbell, Smartphone, Tv, Armchair, Bike, Briefcase,
+    PartyPopper, Stethoscope, Tent, Construction, Guitar
+} from 'lucide-react-native';
 import { BlurView } from '@react-native-community/blur';
 import LinearGradient from 'react-native-linear-gradient';
 import { createItem } from '../../services/itemService';
@@ -9,6 +13,26 @@ import { pickImages, uploadMultipleImages } from '../../services/imageService';
 import GlassView from '../../components/GlassView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AuthContext } from '../../context/AuthContext';
+import { CATEGORIES } from '../../config/categories';
+
+// Icon mapping
+const ICON_MAP = {
+    'Car': Car,
+    'Laptop': Laptop,
+    'Shirt': Shirt,
+    'Home': Home,
+    'Dumbbell': Dumbbell,
+    'Smartphone': Smartphone,
+    'Tv': Tv,
+    'Armchair': Armchair,
+    'Bike': Bike,
+    'Briefcase': Briefcase,
+    'PartyPopper': PartyPopper,
+    'Stethoscope': Stethoscope,
+    'Tent': Tent,
+    'Construction': Construction,
+    'Guitar': Guitar,
+};
 
 const AddItemScreen = () => {
     const navigation = useNavigation();
@@ -22,28 +46,30 @@ const AddItemScreen = () => {
     // Form State
     const [category, setCategory] = useState(null);
     const [subCategory, setSubCategory] = useState(null);
+    const [brand, setBrand] = useState(null); // Level 3: String or Object
+    const [model, setModel] = useState(null); // Level 4: String (if brand was object)
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [price, setPrice] = useState('');
     const [location, setLocation] = useState('');
     const [images, setImages] = useState([]);
 
-    // Data
-    const categories = [
-        { id: '1', name: 'Electronics', icon: Laptop },
-        { id: '2', name: 'Vehicles', icon: Car },
-        { id: '3', name: 'Fashion', icon: Shirt },
-        { id: '4', name: 'Home & Garden', icon: HomeIcon },
-        { id: '5', name: 'Sports', icon: Dumbbell },
-    ];
+    // Get subcategories for currently selected category
+    const currentSubCategories = category ? CATEGORIES.find(c => c.name === category)?.subCategories || [] : [];
+    
+    // Get brands/data for selected subcategory
+    const currentSubCategoryObj = category ? currentSubCategories.find(s => s.name === subCategory) : null;
+    const currentBrandsRaw = currentSubCategoryObj?.data || [];
 
-    const subCategories = {
-        'Electronics': ['Mobile Phones', 'Laptops', 'Cameras', 'Audio', 'Drones'],
-        'Vehicles': ['Cars', 'Bikes', 'Scooters', 'Accessories'],
-        'Fashion': ['Men', 'Women', 'Kids', 'Watches', 'Shoes'],
-        'Home & Garden': ['Furniture', 'Decor', 'Tools', 'Garden'],
-        'Sports': ['Gym Equipment', 'Camping', 'Cycling', 'Team Sports'],
-    };
+    // Helper to get brand name whether it's string or object
+    const getBrandName = (b) => typeof b === 'object' ? b.name : b;
+
+    // Get models if the selected brand is an object with data
+    const currentBrandObj = (brand && typeof brand === 'object') ? brand : 
+        currentBrandsRaw.find(b => typeof b === 'object' && b.name === brand);
+    
+    const currentModels = currentBrandObj?.data || [];
+    const modelLabel = currentBrandObj?.label || 'Model';
 
     // Reset form when screen loses focus
     useFocusEffect(
@@ -52,6 +78,8 @@ const AddItemScreen = () => {
                 setStep(1);
                 setCategory(null);
                 setSubCategory(null);
+                setBrand(null);
+                setModel(null);
                 setTitle('');
                 setDescription('');
                 setPrice('');
@@ -64,7 +92,15 @@ const AddItemScreen = () => {
 
     // Handlers
     const handleNext = () => {
-        if (step === 1 && (!category || !subCategory)) return;
+        // Step 1 Validation: Category -> SubCategory -> Brand (if applicable)
+        if (step === 1) {
+            if (!category || !subCategory) return;
+            // Require brand if brands/types are available
+            if (currentBrandsRaw.length > 0 && !brand) return;
+             // Require model if models are available for the selected brand
+            if (currentModels.length > 0 && !model) return;
+        }
+
         if (step === 2 && (!title || !description || !location)) return;
         if (step === 3 && (!price || images.length === 0)) return;
 
@@ -120,7 +156,7 @@ const AddItemScreen = () => {
                     setUploadProgress(0);
                     const basePath = 'items';
                     console.log('Upload base path:', basePath);
-                    
+
                     const uploadedUrls = await uploadMultipleImages(
                         localImages,
                         basePath,
@@ -157,11 +193,37 @@ const AddItemScreen = () => {
                 }
             }
 
+            // Prepare attributes map for any extra data
+            const brandName = typeof brand === 'object' ? brand.name : brand;
+            
+            const attributes = {};
+            if (brandName) {
+                // Use the label from config (e.g., 'Type', 'Company', 'Brand')
+                // We need to access these from the component scope or re-derive them
+                // Since we are inside handleSubmit, we can access component state/vars
+                // But currentSubCategoryObj might not be dependable if state changed?
+                // Actually it depends on 'category' and 'subCategory' state which are stable here.
+                const label = currentSubCategoryObj?.label || 'Brand';
+                attributes[label] = brandName;
+            }
+            if (model) {
+                 const mLabel = currentBrandObj?.label || 'Model';
+                 attributes[mLabel] = model;
+            }
+
+            // Construct a display-friendly subCategory string
+            // We keep it simple for legacy, but store rich data in new fields
+            let displaySubCategory = subCategory;
+            if (brandName) displaySubCategory += ` - ${brandName}`; 
+
             const itemData = {
                 title,
                 description,
                 category,
-                subCategory,
+                subCategory: displaySubCategory,
+                brand: brandName || "",
+                model: model || "",
+                attributes: attributes, // Extra metadata
                 price: parseFloat(price),
                 location,
                 images: imageUrls
@@ -191,13 +253,18 @@ const AddItemScreen = () => {
     // Render Category Card with proper styling
     const renderCategoryCard = (cat) => {
         const isSelected = category === cat.name;
-        const IconComponent = cat.icon;
+        const IconComponent = ICON_MAP[cat.iconName] || Laptop; // Fallback icon
 
         return (
             <TouchableOpacity
                 key={cat.id}
                 style={[styles.catCard, isSelected && styles.catCardSelected]}
-                onPress={() => { setCategory(cat.name); setSubCategory(null); }}
+                onPress={() => {
+                    setCategory(cat.name);
+                    setSubCategory(null);
+                    setBrand(null);
+                    setModel(null);
+                }}
                 activeOpacity={0.8}
             >
                 <View style={[styles.catIconContainer, isSelected && styles.catIconSelected]}>
@@ -213,25 +280,73 @@ const AddItemScreen = () => {
         );
     };
 
+    // Get dynamic label for the 3rd level
+    const dynamicLabel = currentSubCategoryObj?.label || 'Type';
+
     // Render Steps
     const renderStep1 = () => (
         <View style={styles.stepContainer}>
-            <Text style={styles.stepTitle}>Choose a Category</Text>
+            <Text style={styles.stepTitle}>Category</Text>
             <View style={styles.gridContainer}>
-                {categories.map(renderCategoryCard)}
+                {CATEGORIES.map(renderCategoryCard)}
             </View>
 
             {category && (
                 <>
-                    <Text style={[styles.stepTitle, { marginTop: 24 }]}>Select Sub-Category</Text>
+                    <Text style={[styles.stepTitle, { marginTop: 24 }]}>Sub-Category</Text>
                     <View style={styles.subCatContainer}>
-                        {subCategories[category].map((sub, index) => (
+                        {currentSubCategories.map((sub, index) => (
                             <TouchableOpacity
                                 key={index}
-                                onPress={() => setSubCategory(sub)}
-                                style={[styles.subButton, subCategory === sub && styles.subButtonSelected]}
+                                onPress={() => {
+                                    setSubCategory(sub.name);
+                                    setBrand(null);
+                                    setModel(null);
+                                }}
+                                style={[styles.subButton, subCategory === sub.name && styles.subButtonSelected]}
                             >
-                                <Text style={[styles.subText, subCategory === sub && styles.subTextSelected]}>{sub}</Text>
+                                <Text style={[styles.subText, subCategory === sub.name && styles.subTextSelected]}>{sub.name}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </>
+            )}
+
+            {subCategory && currentBrandsRaw.length > 0 && (
+                <>
+                    <Text style={[styles.stepTitle, { marginTop: 24 }]}>{dynamicLabel}</Text>
+                    <View style={styles.subCatContainer}>
+                        {currentBrandsRaw.map((b, index) => {
+                            const bName = getBrandName(b);
+                            const isSelected = (brand && typeof brand === 'object' ? brand.name : brand) === bName;
+                            return (
+                                <TouchableOpacity
+                                    key={index}
+                                    onPress={() => {
+                                        setBrand(b); // Store the whole object if available, or string
+                                        setModel(null);
+                                    }}
+                                    style={[styles.subButton, isSelected && styles.subButtonSelected]}
+                                >
+                                    <Text style={[styles.subText, isSelected && styles.subTextSelected]}>{bName}</Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                </>
+            )}
+
+            {brand && currentModels.length > 0 && (
+                <>
+                    <Text style={[styles.stepTitle, { marginTop: 24 }]}>{modelLabel}</Text>
+                    <View style={styles.subCatContainer}>
+                        {currentModels.map((m, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                onPress={() => setModel(m)}
+                                style={[styles.subButton, model === m && styles.subButtonSelected]}
+                            >
+                                <Text style={[styles.subText, model === m && styles.subTextSelected]}>{m}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -343,7 +458,14 @@ const AddItemScreen = () => {
             <Text style={styles.successSub}>Your ad for "{title}" is ready to go live.</Text>
 
             <View style={styles.summaryCard}>
-                <Text style={styles.summaryRow}>Category: <Text style={styles.summaryVal}>{category} {'>'} {subCategory}</Text></Text>
+                <Text style={styles.summaryRow}>Category: <Text style={styles.summaryVal}>{category}</Text></Text>
+                <Text style={styles.summaryRow}>Sub-Category: 
+                    <Text style={styles.summaryVal}>
+                        {subCategory}
+                        {brand ? ` (${getBrandName(brand)})` : ''}
+                        {model ? ` ${model}` : ''}
+                    </Text>
+                </Text>
                 <Text style={styles.summaryRow}>Location: <Text style={styles.summaryVal}>{location}</Text></Text>
                 <Text style={styles.summaryRow}>Price: <Text style={styles.summaryVal}>₹{price}/day</Text></Text>
                 <Text style={styles.summaryRow}>Photos: <Text style={styles.summaryVal}>{images.length} uploaded</Text></Text>
@@ -388,14 +510,22 @@ const AddItemScreen = () => {
                 <TouchableOpacity
                     style={[
                         styles.nextButton,
-                        ((step === 1 && (!category || !subCategory)) ||
+                        ((step === 1 && (!category || !subCategory || (currentBrandsRaw.length > 0 && !brand) || (currentModels.length > 0 && !model))) ||
                             (step === 2 && (!title || !description || !location)) ||
-                            (step === 3 && (!price || images.length === 0))) && styles.nextButtonDisabled
+                            (step === 3 && (!price || images.length === 0)) || 
+                            loading) && styles.nextButtonDisabled
                     ]}
                     onPress={handleNext}
+                    disabled={loading}
                 >
-                    <Text style={styles.nextBtnText}>{step === 4 ? 'Post Now' : 'Next'}</Text>
-                    {step !== 4 && <ChevronRight size={20} color="#FFF" />}
+                    {loading ? (
+                        <ActivityIndicator color="#FFF" size="small" />
+                    ) : (
+                        <>
+                            <Text style={styles.nextBtnText}>{step === 4 ? 'Post Now' : 'Next'}</Text>
+                            {step !== 4 && <ChevronRight size={20} color="#FFF" />}
+                        </>
+                    )}
                 </TouchableOpacity>
             </View>
 

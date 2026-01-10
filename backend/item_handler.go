@@ -3,6 +3,7 @@ package backend
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -135,7 +136,24 @@ func getItems(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	cursor, err := collection.Find(ctx, filter, options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}))
+	// Pagination
+	limit := int64(20) // Default limit
+	page := int64(1)
+	if l := r.URL.Query().Get("limit"); l != "" {
+		if val, err := strconv.ParseInt(l, 10, 64); err == nil && val > 0 {
+			limit = val
+		}
+	}
+	if p := r.URL.Query().Get("page"); p != "" {
+		if val, err := strconv.ParseInt(p, 10, 64); err == nil && val > 0 {
+			page = val
+		}
+	}
+	skip := (page - 1) * limit
+
+	findOptions := options.Find().SetSort(bson.D{{Key: "createdAt", Value: -1}}).SetLimit(limit).SetSkip(skip)
+
+	cursor, err := collection.Find(ctx, filter, findOptions)
 	if err != nil {
 		JSONError(w, http.StatusInternalServerError, "Failed to fetch items")
 		return
@@ -144,6 +162,9 @@ func getItems(w http.ResponseWriter, r *http.Request) {
 
 	var items []Item
 	cursor.All(ctx, &items)
+
+	// Get total count for metadata
+	totalCount, _ := collection.CountDocuments(ctx, filter)
 
 	// Populate owners
 	userCol := GetCollection("users")
@@ -155,7 +176,10 @@ func getItems(w http.ResponseWriter, r *http.Request) {
 
 	JSON(w, http.StatusOK, map[string]interface{}{
 		"items": items,
-		"total": len(items),
+		"total": totalCount,
+		"page":  page,
+		"limit": limit,
+		"pages": (totalCount + limit - 1) / limit,
 	})
 }
 

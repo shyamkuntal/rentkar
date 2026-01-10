@@ -76,6 +76,38 @@ const MyAdDetailScreen = () => {
             </View>
           </View>
 
+          {/* Details Chips - Category, Brand, Model */}
+          {(listing.category || listing.brand || listing.model || listing.location) && (
+            <View style={styles.detailsRow}>
+              {listing.category && (
+                <View style={styles.detailChip}>
+                  <Text style={styles.detailChipLabel}>Category</Text>
+                  <Text style={styles.detailChipValue} numberOfLines={1}>{listing.category}</Text>
+                </View>
+              )}
+              {listing.brand && (
+                <View style={styles.detailChip}>
+                  <Text style={styles.detailChipLabel}>Brand</Text>
+                  <Text style={styles.detailChipValue} numberOfLines={1}>{listing.brand}</Text>
+                </View>
+              )}
+              {listing.model && (
+                <View style={styles.detailChip}>
+                  <Text style={styles.detailChipLabel}>Model</Text>
+                  <Text style={styles.detailChipValue} numberOfLines={1}>{listing.model}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Location */}
+          {listing.location && (
+            <View style={styles.locationContainer}>
+              <MapPin size={16} color="#FF5A5F" />
+              <Text style={styles.locationText}>{listing.location}</Text>
+            </View>
+          )}
+
           <View style={styles.section}>
              <Text style={styles.sectionTitle}>Description</Text>
              <Text style={styles.description}>
@@ -265,6 +297,48 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#CCC',
     lineHeight: 26,
+  },
+  // Detail chips for Category/Brand/Model
+  detailsRow: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    gap: 10,
+  },
+  detailChip: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  detailChipLabel: {
+    color: '#888',
+    fontSize: 11,
+    marginBottom: 4,
+  },
+  detailChipValue: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(255,90,95,0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,90,95,0.2)',
+  },
+  locationText: {
+    color: '#FFF',
+    fontSize: 14,
+    marginLeft: 10,
+    flex: 1,
   },
   bottomBar: {
     position: 'absolute',

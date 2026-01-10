@@ -26,6 +26,13 @@ const CategoryScreen = () => {
       <Image source={{ uri: item.image }} style={styles.cardImage} />
       <View style={styles.cardContent}>
         <Text style={styles.cardTitle} numberOfLines={2}>{item.title}</Text>
+        
+        {(item.brand || item.model) && (
+            <Text style={{color: '#AAA', fontSize: 11, marginBottom: 6}} numberOfLines={1}>
+            {item.brand}{item.model ? ` • ${item.model}` : ''}
+            </Text>
+        )}
+
         <Text style={styles.cardPrice}>₹{item.price}<Text style={styles.perDay}>/day</Text></Text>
         <View style={styles.cardMeta}>
           <View style={styles.locationRow}>
