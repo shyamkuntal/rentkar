@@ -1,6 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { loginUser, registerUser, getCurrentUser } from '../services/authService';
+import { loginUser, registerUser, getCurrentUser, loginWithGoogleBackend } from '../services/authService';
 import { saveToken, removeToken, getToken } from '../services/api';
+import { configureGoogleSignIn, signOutGoogle } from '../services/googleAuthService';
 
 export const AuthContext = createContext();
 
@@ -55,6 +56,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       setIsLoading(true);
+      await signOutGoogle(); // Sign out from Google too
       await removeToken();
       setUserToken(null);
       setUser(null);
@@ -62,6 +64,38 @@ export const AuthProvider = ({ children }) => {
       console.error('Logout error:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Login with Google
+  const loginWithGoogle = async (googleResult) => {
+    try {
+      setIsLoading(true);
+      // Send Google user info to our backend to create/login user
+      const response = await loginWithGoogleBackend(googleResult);
+
+      if (response.token) {
+        await saveToken(response.token);
+        setUserToken(response.token);
+        setUser(response.user);
+        return { success: true };
+      }
+      return { success: false, error: 'No token received' };
+    } catch (error) {
+      console.error('Google login error:', error);
+      return { success: false, error: error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Refresh user data
+  const refreshUser = async () => {
+    try {
+      const response = await getCurrentUser();
+      setUser(response.user);
+    } catch (error) {
+      console.error('Refresh user error:', error);
     }
   };
 
@@ -92,6 +126,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    configureGoogleSignIn();
     isLoggedIn();
   }, []);
 
@@ -100,6 +135,8 @@ export const AuthProvider = ({ children }) => {
       login,
       register,
       logout,
+      loginWithGoogle,
+      refreshUser,
       isLoading,
       userToken,
       user,

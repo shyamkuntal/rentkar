@@ -130,6 +130,31 @@ func (h *Hub) BroadcastToRoom(room string, message []byte) {
 	}
 }
 
+// NotifyUser sends a notification to a specific user regardless of room membership
+// This enables real-time notifications for chat messages and booking updates
+func (h *Hub) NotifyUser(userID string, message []byte) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	for client := range h.Clients {
+		if client.UserID.Hex() == userID {
+			select {
+			case client.Send <- message:
+				log.Printf("Notification sent to user %s", userID)
+			default:
+				log.Printf("Failed to send notification to user %s (buffer full)", userID)
+			}
+		}
+	}
+}
+
+// NotifyUsers sends a notification to multiple users
+func (h *Hub) NotifyUsers(userIDs []string, message []byte) {
+	for _, userID := range userIDs {
+		h.NotifyUser(userID, message)
+	}
+}
+
 func (c *Client) ReadPump() {
 	defer func() {
 		hub.Unregister <- c
@@ -266,13 +291,43 @@ func saveAndBroadcastMessage(client *Client, chatID, content string) {
 	// Also update updatedAt in case no other participants (shouldn't happen but just in case)
 	chatCollection.UpdateOne(ctx, bson.M{"_id": chatObjID}, bson.M{"$set": updateFields})
 
-	// Broadcast to room
+	// Broadcast to room (for users currently viewing this chat)
 	responseData, _ := json.Marshal(map[string]interface{}{
 		"type":    "new_message",
 		"message": message,
 	})
 
 	hub.BroadcastToRoom(chatID, responseData)
+
+	// Also send direct notification to all participants (for badge updates)
+	// This notifies users even if they're not in the chat room
+	for _, participantID := range chat.Participants {
+		if participantID != client.UserID {
+			// Get sender info for the notification
+			userCol := GetCollection("users")
+			var sender User
+			userCol.FindOne(ctx, bson.M{"_id": client.UserID}).Decode(&sender)
+
+			// Truncate content for preview
+			preview := content
+			if len(preview) > 50 {
+				preview = preview[:50] + "..."
+			}
+
+			notificationData, _ := json.Marshal(map[string]interface{}{
+				"type":       "new_chat_notification",
+				"chatId":     chatID,
+				"senderId":   client.UserID.Hex(),
+				"senderName": sender.Name,
+				"preview":    preview,
+				"timestamp":  time.Now(),
+			})
+			hub.NotifyUser(participantID.Hex(), notificationData)
+
+			// Also send FCM push notification for when user is offline
+			SendChatPushNotification(participantID, sender.Name, content, chatID)
+		}
+	}
 }
 
 func broadcastTyping(client *Client, chatID string, isTyping bool) {

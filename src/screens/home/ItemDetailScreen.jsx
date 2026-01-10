@@ -28,6 +28,7 @@ import { checkFavorite, addFavorite, removeFavorite } from '../../services/favor
 import { getItemReviews } from '../../services/reviewService';
 import { AuthContext } from '../../context/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ImageSlider from '../../components/ImageSlider';
 
 const colors = {
   primary: '#FF5A5F',
@@ -53,18 +54,35 @@ const ProductDetailsScreen = () => {
   const hideChatOption = route.params?.hideChatOption;
 
   const product = route.params?.product;
-  const isOwner = user?.id === product?.owner?.id;
-
   const [isFavorite, setIsFavorite] = useState(false);
   const [chatLoading, setChatLoading] = useState(false);
   const [reviews, setReviews] = useState([]);
 
+  // We need a local state for product because we might need to refresh it
+  // or it might be partial from the navigation params
+  const [item, setItem] = useState(product);
+
+  const isOwner = user?.id === item?.owner?.id;
+  
   useEffect(() => {
     if (product?.id) {
       checkFavoriteStatus();
       fetchReviews();
+      fetchFullItemDetails();
     }
   }, [product?.id]);
+
+  const fetchFullItemDetails = async () => {
+    try {
+      const { getItemById } = require('../../services/itemService'); 
+      const response = await getItemById(product.id);
+      if (response && response.item) {
+        setItem(response.item);
+      }
+    } catch (error) {
+      console.log('Error fetching full item details:', error);
+    }
+  };
 
   const fetchReviews = async () => {
     try {
@@ -100,23 +118,21 @@ const ProductDetailsScreen = () => {
   };
 
   const handleRentNow = () => {
-    navigation.navigate('RentBooking', { product: product });
+    navigation.navigate('RentBooking', { product: item });
   };
 
   const handleChat = async () => {
     try {
       setChatLoading(true);
-      // Create or get existing chat
-      const response = await createChat(product.id, product.owner.id);
-
-      const chat = response.chat; // Backend returns { chat: ... }
+      const response = await createChat(item.id, item.owner.id);
+      const chat = response.chat;
 
       navigation.navigate('ChatScreen', {
         chatId: chat.id,
-        recipientId: product.owner?.id,
-        recipientName: product.owner?.name,
-        recipientAvatar: product.owner?.avatar,
-        product: product
+        recipientId: item.owner?.id,
+        recipientName: item.owner?.name,
+        recipientAvatar: item.owner?.avatar,
+        product: item
       });
     } catch (error) {
       console.error('Error starting chat:', error);
@@ -127,13 +143,17 @@ const ProductDetailsScreen = () => {
   };
 
   const handleViewProfile = () => {
-    // If we have owner data, navigate
-    if (product?.owner) {
-      navigation.navigate('LenderProfile', { owner: product.owner });
+    if (item?.owner) {
+      navigation.navigate('LenderProfile', { owner: item.owner });
     }
   };
 
-  if (!product) return null; // Handle loading state properly if needed
+  if (!item) return null;
+
+  // Logic to determine if buttons should be shown
+  const showStats = !isOwner && item.status === 'active';
+  const showChat = !hideChatOption && !isOwner && item.status === 'active';
+  const showRent = !hideRentOption && !isOwner && item.status === 'active';
 
   return (
     <View style={styles.container}>
@@ -145,58 +165,60 @@ const ProductDetailsScreen = () => {
         contentContainerStyle={styles.scrollContent}
         bounces={false}
       >
-        {/* Product Image Header */}
+        {/* Product Image Slider */}
         <View style={styles.imageContainer}>
-          <Image source={{ uri: product.images && product.images.length > 0 ? product.images[0] : (product.image || 'https://via.placeholder.com/400') }} style={styles.image} resizeMode="cover" />
-          <View style={styles.imageOverlay} />
-
-
+          <ImageSlider 
+            images={item.images?.length > 0 ? item.images : [item.image || 'https://via.placeholder.com/400']}
+            height={height * 0.45}
+            showButtons={true}
+            showDots={true}
+          />
+          <View style={styles.imageOverlay} pointerEvents="none" />
         </View>
 
         {/* Main Content Body */}
         <View style={styles.contentContainer}>
           <View style={styles.titleSection}>
-            <Text style={styles.title}>{product.title}</Text>
+            <Text style={styles.title}>{item.title}</Text>
             <View style={styles.priceWrapper}>
-              <Text style={styles.price}>₹{product.price}</Text>
-              <Text style={styles.rateUnit}>{product.rateUnit}</Text>
+              <Text style={styles.price}>₹{item.price}</Text>
+              <Text style={styles.rateUnit}>{item.rateUnit || '/day'}</Text>
             </View>
           </View>
 
           <View style={styles.metaRow}>
             <View style={styles.locationBadge}>
               <MapPin size={14} color={colors.text.secondary} />
-              <Text style={styles.locationText}>{product.location}</Text>
+              <Text style={styles.locationText}>{item.location || 'Location N/A'}</Text>
             </View>
             <View style={styles.ratingBadge}>
               <Star size={14} color="#FFD700" fill="#FFD700" />
-              <Text style={styles.ratingText}> {product.rating ? `${Number(product.rating).toFixed(1)}/5` : 'New'} ({product.reviews || 0} reviews)</Text>
+              <Text style={styles.ratingText}> {item.rating ? `${Number(item.rating).toFixed(1)}/5` : 'New'} ({item.reviews || 0} reviews)</Text>
             </View>
           </View>
 
           {/* Owner Profile Card */}
           <View style={styles.ownerCard}>
-            <Image source={{ uri: product.owner?.avatar || 'https://via.placeholder.com/100' }} style={styles.ownerAvatar} />
+            <Image source={{ uri: item.owner?.avatar || 'https://via.placeholder.com/100' }} style={styles.ownerAvatar} />
             <View style={styles.ownerInfo}>
               <Text style={styles.ownerLabel}>Lender</Text>
-              <Text style={styles.ownerName}>{product.owner?.name || 'Unknown User'}</Text>
+              <Text style={styles.ownerName}>{item.owner?.name || 'Unknown User'}</Text>
               <View style={styles.ownerRatingRow}>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
                     key={star}
                     size={12}
                     color="#FFD700"
-                    fill={star <= Math.round(product.owner?.rating || 0) ? '#FFD700' : 'transparent'}
+                    fill={star <= Math.round(item.owner?.rating || 0) ? '#FFD700' : 'transparent'}
                   />
                 ))}
                 <Text style={styles.ownerRatingText}>
-                  {product.owner?.rating ? `${Number(product.owner.rating).toFixed(1)}/5` : 'No rating'}
+                  {item.owner?.rating ? `${Number(item.owner.rating).toFixed(1)}/5` : 'No rating'}
                 </Text>
               </View>
             </View>
 
-            {/* Added onPress here, hidden if navigated from profile or is owner */}
-            {!hideProfileLink && !isOwner && product.owner && (
+            {!hideProfileLink && !isOwner && item.owner && (
               <TouchableOpacity style={styles.viewProfileBtn} onPress={handleViewProfile}>
                 <Text style={styles.viewProfileText}>View Profile</Text>
               </TouchableOpacity>
@@ -205,7 +227,7 @@ const ProductDetailsScreen = () => {
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.descriptionText}>{product.description}</Text>
+            <Text style={styles.descriptionText}>{item.description}</Text>
           </View>
 
           {/* Reviews Section */}
@@ -262,16 +284,15 @@ const ProductDetailsScreen = () => {
             <TouchableOpacity style={[styles.roundButton, styles.marginRight]}>
               <Share2 size={22} color="#FFF" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.roundButton}>
-              <Heart size={22} color="#FFF" />
+            <TouchableOpacity style={styles.roundButton} onPress={toggleFavorite}>
+               <Heart size={22} color={isFavorite ? "#FF5A5F" : "#FFF"} fill={isFavorite ? "#FF5A5F" : "transparent"} />
             </TouchableOpacity>
           </View>
         </View>
       </View>
 
       {/* Floating Glass Action Bar */}
-      {/* Floating Glass Action Bar - Only show if at least one option is available and NOT owner */}
-      {(!hideRentOption || !hideChatOption) && !isOwner && (
+      {(showRent || showChat) && (
         <View style={styles.bottomBarContainer}>
           <View style={styles.glassBackground}>
             {Platform.OS === 'android' ? (
@@ -287,16 +308,14 @@ const ProductDetailsScreen = () => {
           </View>
 
           <View style={styles.bottomBarContent}>
-            {/* Added onPress here */}
-            {!hideChatOption && (
+            {showChat && (
               <TouchableOpacity style={styles.chatButton} onPress={handleChat}>
                 <MessageCircle size={24} color={colors.primary} />
                 <Text style={styles.chatButtonText}>Chat</Text>
               </TouchableOpacity>
             )}
 
-            {/* Added onPress here */}
-            {!hideRentOption && (
+            {showRent && (
               <TouchableOpacity style={styles.rentButton} onPress={handleRentNow}>
                 <Text style={styles.rentButtonText}>Rent Now</Text>
               </TouchableOpacity>

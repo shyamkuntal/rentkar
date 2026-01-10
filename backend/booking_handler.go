@@ -2,6 +2,7 @@ package backend
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -51,26 +52,26 @@ func HandlePendingRequestsCount(w http.ResponseWriter, r *http.Request) {
 	collection := GetCollection("bookings")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	
+
 	// Count bookings where user is owner and status is pending
 	count, err := collection.CountDocuments(ctx, bson.M{"ownerId": userID, "status": "pending"})
 	if err != nil {
 		JSONError(w, http.StatusInternalServerError, "Failed to count pending requests")
 		return
 	}
-	
+
 	JSON(w, http.StatusOK, map[string]interface{}{"count": count})
 }
 
 func HandleBookingByID(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/bookings/")
-	
+
 	// Skip if this is a known sub-route (these should be handled by specific handlers)
 	if path == "owner" || path == "pending-count" {
 		JSONError(w, http.StatusNotFound, "Not found")
 		return
 	}
-	
+
 	id := path
 	switch r.Method {
 	case http.MethodGet:
@@ -146,6 +147,24 @@ func createBooking(w http.ResponseWriter, r *http.Request) {
 	}
 
 	collection.InsertOne(ctx, booking)
+
+	// Notify item owner via WebSocket about new booking request
+	notificationData, _ := json.Marshal(map[string]interface{}{
+		"type":       "booking_notification",
+		"action":     "new_request",
+		"bookingId":  booking.ID.Hex(),
+		"trackingId": booking.TrackingID,
+		"itemTitle":  item.Title,
+		"totalPrice": booking.TotalPrice,
+		"startDate":  booking.StartDate,
+		"endDate":    booking.EndDate,
+		"timestamp":  time.Now(),
+	})
+	hub.NotifyUser(item.OwnerID.Hex(), notificationData)
+
+	// Also send FCM push notification for when owner is offline
+	SendBookingPushNotification(item.OwnerID, "new_request", item.Title, booking.ID.Hex())
+
 	JSON(w, http.StatusCreated, map[string]interface{}{"message": "Booking created", "booking": booking})
 }
 
@@ -209,7 +228,7 @@ func getMyBookings(w http.ResponseWriter, r *http.Request) {
 		var item Item
 		if err := itemCol.FindOne(ctx, bson.M{"_id": b.ItemID}).Decode(&item); err == nil {
 			pb.Item = &Item{
-				ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, 
+				ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price,
 				Category: item.Category, Location: item.Location, Description: item.Description,
 				Rating: item.Rating, Reviews: item.Reviews,
 			}
@@ -290,7 +309,7 @@ func getOwnerBookings(w http.ResponseWriter, r *http.Request) {
 		var item Item
 		if err := itemCol.FindOne(ctx, bson.M{"_id": b.ItemID}).Decode(&item); err == nil {
 			pb.Item = &Item{
-				ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, 
+				ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price,
 				Category: item.Category, Location: item.Location, Description: item.Description,
 				Rating: item.Rating, Reviews: item.Reviews,
 			}
@@ -369,7 +388,7 @@ func getBooking(w http.ResponseWriter, r *http.Request, id string) {
 	var item Item
 	if err := itemCol.FindOne(ctx, bson.M{"_id": booking.ItemID}).Decode(&item); err == nil {
 		pb.Item = &Item{
-			ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price, 
+			ID: item.ID, Title: item.Title, Images: item.Images, Price: item.Price,
 			Category: item.Category, Location: item.Location, Description: item.Description,
 			Rating: item.Rating, Reviews: item.Reviews,
 		}
@@ -427,7 +446,7 @@ func updateBookingStatus(w http.ResponseWriter, r *http.Request, id string) {
 			JSONError(w, http.StatusForbidden, "Not authorized to cancel this booking")
 			return
 		}
-		
+
 		// Only allow cancelling properly (pending or confirmed)
 		if booking.Status == "completed" || booking.Status == "rejected" || booking.Status == "cancelled" {
 			JSONError(w, http.StatusBadRequest, "Cannot cancel a booking that is "+booking.Status)
@@ -475,6 +494,41 @@ func updateBookingStatus(w http.ResponseWriter, r *http.Request, id string) {
 			fmt.Println("Error incrementing totalBookings:", err)
 		}
 	}
+
+	// Notify renter about booking status change via WebSocket
+	var notifyUserID primitive.ObjectID
+	var actionDesc string
+	if req.Status == "cancelled" {
+		// Notify the other party (not the canceller)
+		if booking.OwnerID == userID {
+			notifyUserID = booking.RenterID
+		} else {
+			notifyUserID = booking.OwnerID
+		}
+		actionDesc = "cancelled"
+	} else {
+		// For confirmed/rejected, notify the renter
+		notifyUserID = booking.RenterID
+		actionDesc = req.Status
+	}
+
+	// Get item info for notification
+	var item Item
+	GetCollection("items").FindOne(ctx, bson.M{"_id": booking.ItemID}).Decode(&item)
+
+	notificationData, _ := json.Marshal(map[string]interface{}{
+		"type":       "booking_notification",
+		"action":     actionDesc,
+		"bookingId":  booking.ID.Hex(),
+		"trackingId": booking.TrackingID,
+		"itemTitle":  item.Title,
+		"status":     req.Status,
+		"timestamp":  time.Now(),
+	})
+	hub.NotifyUser(notifyUserID.Hex(), notificationData)
+
+	// Also send FCM push notification for when user is offline
+	SendBookingPushNotification(notifyUserID, actionDesc, item.Title, booking.ID.Hex())
 
 	JSON(w, http.StatusOK, map[string]string{"message": "Booking updated"})
 }

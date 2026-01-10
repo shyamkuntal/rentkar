@@ -17,8 +17,7 @@ import MyRentalsScreen from '../screens/rent/MyRentalsScreen';
 import AddItemScreen from '../screens/list/AddItemScreen';
 import MyListingsScreen from '../screens/list/MyListingsScreen';
 import ChatListScreen from '../screens/chat/ChatListScreen';
-import { getPendingRequestsCount } from '../services/bookingService';
-import { getUnreadCount } from '../services/chatService';
+import { useNotifications } from '../context/NotificationContext';
 
 // Icons
 import { Home, Calendar, FolderOpen, MessageCircle, Plus } from 'lucide-react-native';
@@ -94,24 +93,17 @@ const LiquidGlassSwitcher = ({ state, descriptors, navigation }) => {
     }
   }, [state.index]);
 
-  // Pending requests count for Bookings badge - MUST be before early return
-  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
-  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  // Use NotificationContext for real-time badge updates
+  const { unreadChatCount, pendingBookingsCount, refreshCounts, markBookingsViewed } = useNotifications();
 
+  // Refresh counts when switching to Bookings or Chats tab
   useEffect(() => {
-    const fetchCounts = async () => {
-      try {
-        const [pendingResponse, unreadResponse] = await Promise.all([
-          getPendingRequestsCount(),
-          getUnreadCount()
-        ]);
-        setPendingRequestsCount(pendingResponse.count || 0);
-        setUnreadChatCount(unreadResponse.count || 0);
-      } catch (error) {
-        console.log('Error fetching counts:', error);
-      }
-    };
-    fetchCounts();
+    const activeRoute = state.routes[state.index];
+    if (activeRoute?.name === 'Bookings') {
+      markBookingsViewed();
+    } else if (activeRoute?.name === 'Chats') {
+      refreshCounts();
+    }
   }, [state.index]);
 
   // Check if Post screen is active - hide tab bar
@@ -144,9 +136,9 @@ const LiquidGlassSwitcher = ({ state, descriptors, navigation }) => {
     return (
       <View>
         {icon}
-        {routeName === 'Bookings' && pendingRequestsCount > 0 && (
+        {routeName === 'Bookings' && pendingBookingsCount > 0 && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{pendingRequestsCount > 9 ? '9+' : pendingRequestsCount}</Text>
+            <Text style={styles.badgeText}>{pendingBookingsCount > 9 ? '9+' : pendingBookingsCount}</Text>
           </View>
         )}
         {routeName === 'Chats' && unreadChatCount > 0 && (

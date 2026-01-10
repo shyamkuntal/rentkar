@@ -6,6 +6,7 @@ import { colors } from '../../theme/colors';
 import GlassView from '../../components/GlassView';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ImageSlider from '../../components/ImageSlider';
 
 const { width } = Dimensions.get('window');
 
@@ -29,11 +30,19 @@ const MyAdDetailScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Header Image */}
+        {/* Header Image Slider */}
         <View style={styles.imageContainer}>
-          <Image source={{ uri: listing.image }} style={styles.image} resizeMode="cover" />
-          <View style={styles.statusBadgeImg}>
-            <Text style={styles.statusTextImg}>{listing.status === 'active' ? 'Active' : 'Rented'}</Text>
+          <ImageSlider 
+            images={listing.images && listing.images.length > 0 ? listing.images : [listing.image || 'https://via.placeholder.com/400']}
+            height={340}
+            showButtons={true}
+            showDots={true}
+          />
+          <View style={[
+            styles.statusBadgeImg, 
+            { backgroundColor: listing.status === 'active' ? 'rgba(76, 175, 80, 0.9)' : 'rgba(255, 69, 69, 0.9)' }
+          ]}>
+            <Text style={styles.statusTextImg}>{listing.status === 'active' ? 'Active' : 'Inactive'}</Text>
           </View>
         </View>
 
@@ -41,7 +50,7 @@ const MyAdDetailScreen = () => {
           <View style={styles.headerRow}>
              <View style={{flex: 1}}>
                 <Text style={styles.title}>{listing.title}</Text>
-                <Text style={styles.date}>{listing.date}</Text>
+                <Text style={styles.date}>Listed on {new Date(listing.createdAt).toLocaleDateString()}</Text>
              </View>
              <Text style={styles.price}>₹{listing.price}<Text style={styles.perTime}>/day</Text></Text>
           </View>
@@ -50,17 +59,19 @@ const MyAdDetailScreen = () => {
           <View style={styles.statsRow}>
             <View style={styles.statCard}>
                 <Eye size={20} color={colors.primary} />
-                <Text style={styles.statValue}>{listing.views}</Text>
+                <Text style={styles.statValue}>{listing.views || 0}</Text>
                 <Text style={styles.statLabel}>Total Views</Text>
             </View>
             <View style={styles.statCard}>
                 <Calendar size={20} color={colors.primary} />
-                <Text style={styles.statValue}>12</Text>
+                <Text style={styles.statValue}>
+                  {Math.floor((new Date() - new Date(listing.createdAt)) / (1000 * 60 * 60 * 24))}
+                </Text>
                 <Text style={styles.statLabel}>Days Listed</Text>
             </View>
             <View style={styles.statCard}>
                 <Tag size={20} color={colors.primary} />
-                <Text style={styles.statValue}>Electronics</Text>
+                <Text style={styles.statValue} numberOfLines={1}>{listing.category || 'Item'}</Text>
                 <Text style={styles.statLabel}>Category</Text>
             </View>
           </View>
@@ -68,7 +79,7 @@ const MyAdDetailScreen = () => {
           <View style={styles.section}>
              <Text style={styles.sectionTitle}>Description</Text>
              <Text style={styles.description}>
-                This is a detailed description of the {listing.title}. It is in excellent condition and includes all original accessories. Perfect for professionals and enthusiasts alike.
+                {listing.description || 'No description provided.'}
              </Text>
           </View>
           
@@ -142,7 +153,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   imageContainer: {
-    height: 300,
+    height: 340, // Taller image area to accommodate badging and content overlap
     width: '100%',
     backgroundColor: '#333',
   },
@@ -160,45 +171,49 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 20, // Ensure zIndex is high enough
   },
   statusBadgeImg: {
     position: 'absolute',
-    bottom: 20,
-    left: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    bottom: 40, // Moved up to clear the content overlap
+    left: 24,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
+    zIndex: 10,
   },
   statusTextImg: {
     color: '#FFF',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     textTransform: 'uppercase',
   },
   contentContainer: {
-    padding: 20,
-    marginTop: -20,
+    padding: 24,
+    marginTop: -24, // Slightly deeper overlap
     backgroundColor: '#1A1A1A',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 32, // More rounded
+    borderTopRightRadius: 32,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 24,
+    marginTop: 8, // Give some breathing room from the top edge
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '700',
     color: '#FFF',
-    marginBottom: 4,
+    marginBottom: 6,
     marginRight: 10,
+    lineHeight: 32,
   },
   date: {
     fontSize: 13,
     color: '#888',
+    marginBottom: 4,
   },
   price: {
     fontSize: 24,
@@ -213,42 +228,43 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 30,
+    marginBottom: 32,
+    marginTop: 8,
   },
   statCard: {
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 16,
+    padding: 16,
     alignItems: 'center',
-    marginHorizontal: 4,
+    marginHorizontal: 6,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
   },
   statValue: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFF',
     marginTop: 8,
     marginBottom: 2,
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#888',
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#FFF',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   description: {
-    fontSize: 15,
+    fontSize: 16,
     color: '#CCC',
-    lineHeight: 24,
+    lineHeight: 26,
   },
   bottomBar: {
     position: 'absolute',

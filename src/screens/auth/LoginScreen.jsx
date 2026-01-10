@@ -1,13 +1,15 @@
 import React, { useContext, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Image } from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
 import { Mail, Lock, ArrowRight } from 'lucide-react-native';
+import { signInWithGoogle } from '../../services/googleAuthService';
 
 const LoginScreen = ({ navigation }) => {
-  const { login } = useContext(AuthContext);
+  const { login, loginWithGoogle } = useContext(AuthContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -21,6 +23,25 @@ const LoginScreen = ({ navigation }) => {
 
     if (!result.success) {
       Alert.alert('Login Failed', result.error || 'Invalid credentials');
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    try {
+      const googleResult = await signInWithGoogle();
+      if (loginWithGoogle) {
+        const result = await loginWithGoogle(googleResult);
+        if (!result.success) {
+          Alert.alert('Login Failed', result.error || 'Google sign-in failed');
+        }
+      }
+    } catch (error) {
+      if (!error.message?.includes('cancelled')) {
+        Alert.alert('Error', error.message || 'Google sign-in failed');
+      }
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -88,8 +109,22 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.dividerLine} />
         </View>
 
-        <TouchableOpacity style={styles.socialButton}>
-          <Text style={styles.socialButtonText}>Continue with Google</Text>
+        <TouchableOpacity 
+          style={[styles.socialButton, googleLoading && styles.socialButtonLoading]} 
+          onPress={handleGoogleSignIn}
+          disabled={googleLoading || loading}
+        >
+          {googleLoading ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <>
+              <Image 
+                source={{ uri: 'https://www.google.com/favicon.ico' }} 
+                style={{ width: 20, height: 20, marginRight: 10 }} 
+              />
+              <Text style={styles.socialButtonText}>Continue with Google</Text>
+            </>
+          )}
         </TouchableOpacity>
 
         <View style={styles.footer}>
@@ -194,12 +229,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   socialButton: {
+    flexDirection: 'row',
     backgroundColor: 'rgba(255,255,255,0.05)',
     paddingVertical: 16,
     borderRadius: 30,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  socialButtonLoading: {
+    opacity: 0.6,
   },
   socialButtonText: {
     color: '#FFF',

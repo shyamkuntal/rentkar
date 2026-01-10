@@ -19,6 +19,7 @@ type User struct {
 	TotalRatings  int                `json:"totalRatings" bson:"totalRatings"`
 	TotalListings int                `json:"totalListings" bson:"totalListings"`
 	TotalBookings int                `json:"totalBookings" bson:"totalBookings"`
+	FCMToken      string             `json:"fcmToken,omitempty" bson:"fcmToken,omitempty"`
 	CreatedAt     time.Time          `json:"createdAt" bson:"createdAt"`
 	UpdatedAt     time.Time          `json:"updatedAt" bson:"updatedAt"`
 }

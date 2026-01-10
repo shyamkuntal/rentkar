@@ -6,12 +6,15 @@ import LinearGradient from 'react-native-linear-gradient';
 import { AuthContext } from '../../context/AuthContext';
 import { updateProfile } from '../../services/userService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { showImagePickerOptions, uploadAvatar } from '../../services/imageService';
 
 const EditProfileScreen = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { user, refreshUser } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
+  const [avatarUri, setAvatarUri] = useState(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -38,10 +41,19 @@ const EditProfileScreen = () => {
 
     setLoading(true);
     try {
+      // Upload avatar if changed
+      let avatarUrl = user?.avatar;
+      if (avatarUri && user?.id) {
+        setUploadingAvatar(true);
+        avatarUrl = await uploadAvatar(avatarUri, user.id);
+        setUploadingAvatar(false);
+      }
+
       await updateProfile({
         name: formData.name,
         phone: formData.phone,
         location: formData.location,
+        avatar: avatarUrl,
       });
 
       // Refresh user data in context
@@ -57,19 +69,14 @@ const EditProfileScreen = () => {
       Alert.alert('Error', 'Failed to update profile. Please try again.');
     } finally {
       setLoading(false);
+      setUploadingAvatar(false);
     }
   };
 
   const handleAvatarPress = () => {
-    Alert.alert(
-      'Change Photo',
-      'Choose an option',
-      [
-        { text: 'Take Photo', onPress: () => console.log('Take photo') },
-        { text: 'Choose from Gallery', onPress: () => console.log('Choose from gallery') },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    showImagePickerOptions((uri) => {
+      setAvatarUri(uri);
+    });
   };
 
   return (
@@ -98,11 +105,15 @@ const EditProfileScreen = () => {
         <View style={styles.avatarSection}>
           <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
             <Image
-              source={{ uri: user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200' }}
+              source={{ uri: avatarUri || user?.avatar || 'https://via.placeholder.com/200?text=Avatar' }}
               style={styles.avatar}
             />
             <View style={styles.cameraButton}>
-              <Camera size={18} color="#FFF" />
+              {uploadingAvatar ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Camera size={18} color="#FFF" />
+              )}
             </View>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleAvatarPress}>

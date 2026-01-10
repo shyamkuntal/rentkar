@@ -1,18 +1,22 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Image, Platform, KeyboardAvoidingView, Alert, Modal } from 'react-native';
+import React, { useState, useCallback, useContext } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Image, Platform, KeyboardAvoidingView, Alert, Modal, ActivityIndicator } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { ChevronLeft, ChevronRight, Upload, Check, Camera, MapPin, Laptop, Car, Shirt, Home as HomeIcon, Dumbbell } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Upload, Check, Camera, MapPin, Laptop, Car, Shirt, Home as HomeIcon, Dumbbell, X, Plus } from 'lucide-react-native';
 import { BlurView } from '@react-native-community/blur';
 import LinearGradient from 'react-native-linear-gradient';
 import { createItem } from '../../services/itemService';
+import { pickImages, uploadMultipleImages } from '../../services/imageService';
 import GlassView from '../../components/GlassView';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AuthContext } from '../../context/AuthContext';
 
 const AddItemScreen = () => {
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
+    const { user } = useContext(AuthContext);
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const [successModalVisible, setSuccessModalVisible] = useState(false);
 
     // Form State
@@ -73,24 +77,85 @@ const AddItemScreen = () => {
         else navigation.goBack();
     };
 
-    const handleImageSelect = () => {
-        const mockImages = [
-            'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=1000', // Camera
-            'https://images.unsplash.com/photo-1579829366248-204da8419767?q=80&w=1000&auto=format&fit=crop', // Laptop
-            'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=1000', // Headphones
-            'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=1000', // Shoes
-            'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=1000', // Polaroid
-            'https://images.unsplash.com/photo-1581235720704-06d3acfcb36f?auto=format&fit=crop&q=80&w=1000', // Furniture
-            'https://images.unsplash.com/photo-1503376763036-066120622c74?auto=format&fit=crop&q=80&w=1000', // Car
-        ];
-        // Pick a random image
-        const randomImage = mockImages[Math.floor(Math.random() * mockImages.length)];
-        setImages([...images, randomImage]);
+    const handleImageSelect = async () => {
+        const MAX_IMAGES = 5;
+        if (images.length >= MAX_IMAGES) {
+            Alert.alert('Limit Reached', `You can only upload up to ${MAX_IMAGES} photos`);
+            return;
+        }
+
+        try {
+            const selectedImages = await pickImages(MAX_IMAGES, images);
+            setImages(selectedImages);
+        } catch (error) {
+            console.error('Error selecting images:', error);
+            Alert.alert('Error', 'Failed to select images');
+        }
+    };
+
+    const handleRemoveImage = (index) => {
+        setImages(images.filter((_, i) => i !== index));
     };
 
     const handleSubmit = async () => {
         try {
             setLoading(true);
+
+            // Upload images to Cloud Storage
+            let imageUrls = images;
+            const localImages = images.filter(uri => uri.startsWith('file://') || uri.startsWith('content://'));
+
+            console.log('User ID for upload:', user?.id);
+            console.log('Local images to upload:', localImages.length);
+
+            if (localImages.length > 0) {
+                if (!user?.id) {
+                    console.error('No user ID available for image upload');
+                    Alert.alert('Error', 'Please log in again to upload images');
+                    setLoading(false);
+                    return;
+                }
+
+                try {
+                    setUploadProgress(0);
+                    const basePath = 'items';
+                    console.log('Upload base path:', basePath);
+                    
+                    const uploadedUrls = await uploadMultipleImages(
+                        localImages,
+                        basePath,
+                        (current, total) => {
+                            console.log(`Upload progress: ${current}/${total}`);
+                            setUploadProgress(Math.round((current / total) * 100));
+                        }
+                    );
+
+                    console.log('Uploaded URLs:', uploadedUrls);
+
+                    if (uploadedUrls.length === 0) {
+                        throw new Error('No images were uploaded successfully');
+                    }
+
+                    // Replace local URIs with uploaded URLs
+                    imageUrls = images.map(uri => {
+                        if (uri.startsWith('file://') || uri.startsWith('content://')) {
+                            return uploadedUrls.shift() || uri;
+                        }
+                        return uri;
+                    });
+
+                    console.log('Final image URLs:', imageUrls);
+                } catch (uploadError) {
+                    console.error('Image upload failed:', uploadError);
+                    Alert.alert(
+                        'Upload Failed',
+                        'Failed to upload images. Please check your internet connection and try again.'
+                    );
+                    setLoading(false);
+                    setUploadProgress(0);
+                    return;
+                }
+            }
 
             const itemData = {
                 title,
@@ -99,9 +164,10 @@ const AddItemScreen = () => {
                 subCategory,
                 price: parseFloat(price),
                 location,
-                images
+                images: imageUrls
             };
 
+            console.log('Creating item with data:', itemData);
             await createItem(itemData);
 
             setSuccessModalVisible(true);
@@ -113,6 +179,7 @@ const AddItemScreen = () => {
             );
         } finally {
             setLoading(false);
+            setUploadProgress(0);
         }
     };
 
@@ -233,16 +300,37 @@ const AddItemScreen = () => {
                 <Text style={styles.perDay}>/day</Text>
             </View>
 
-            <Text style={[styles.label, { marginTop: 20 }]}>Add Photos</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20 }}>
+                <Text style={styles.label}>Add Photos</Text>
+                <Text style={{ color: images.length >= 5 ? '#FF5A5F' : '#888', fontSize: 12 }}>
+                    {images.length}/5 photos
+                </Text>
+            </View>
             <View style={styles.photosGrid}>
                 {images.map((img, index) => (
-                    <Image key={index} source={{ uri: img }} style={styles.photoThumb} />
+                    <View key={index} style={styles.photoContainer}>
+                        <Image source={{ uri: img }} style={styles.photoThumb} />
+                        <TouchableOpacity
+                            style={styles.removePhotoBtn}
+                            onPress={() => handleRemoveImage(index)}
+                        >
+                            <X size={14} color="#FFF" />
+                        </TouchableOpacity>
+                    </View>
                 ))}
-                <TouchableOpacity style={styles.addPhotoBtn} onPress={handleImageSelect}>
-                    <Camera size={24} color="#FF5A5F" />
-                    <Text style={styles.addPhotoText}>Add Photo</Text>
-                </TouchableOpacity>
+                {images.length < 5 && (
+                    <TouchableOpacity style={styles.addPhotoBtn} onPress={handleImageSelect}>
+                        <Plus size={24} color="#FF5A5F" />
+                        <Text style={styles.addPhotoText}>Add</Text>
+                    </TouchableOpacity>
+                )}
             </View>
+            {uploadProgress > 0 && uploadProgress < 100 && (
+                <View style={{ marginTop: 12, alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color="#FF5A5F" />
+                    <Text style={{ color: '#888', marginTop: 4 }}>Uploading... {uploadProgress}%</Text>
+                </View>
+            )}
         </View>
     );
 
@@ -443,8 +531,8 @@ const styles = StyleSheet.create({
     perDay: { color: '#888', fontSize: 14 },
 
     // Photos
-    photosGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10 },
-    photoThumb: { width: 100, height: 100, borderRadius: 12, marginRight: 12, marginBottom: 12 },
+    photosGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 16 },
+    photoThumb: { width: '100%', height: '100%' },
     addPhotoBtn: {
         width: 100,
         height: 100,
@@ -455,8 +543,34 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: 'rgba(255,90,95,0.05)',
+        marginRight: 12,
+        marginBottom: 12,
     },
     addPhotoText: { color: '#FF5A5F', fontSize: 11, marginTop: 4, fontWeight: '500' },
+    photoContainer: {
+        position: 'relative',
+        width: 100,
+        height: 100,
+        borderRadius: 12,
+        overflow: 'hidden',
+        marginRight: 12,
+        marginBottom: 12,
+        backgroundColor: 'rgba(25,25,25,0.5)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    removePhotoBtn: {
+        position: 'absolute',
+        top: 6,
+        right: 6,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 10,
+    },
 
     // Success Step
     successIcon: {

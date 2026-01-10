@@ -236,7 +236,7 @@ const ChatScreen = () => {
                 <TouchableOpacity
                     style={styles.productBanner}
                     activeOpacity={0.9}
-                    disabled={true}
+                    onPress={() => navigation.navigate('ItemDetail', { product, hideChatOption: true })}
                 >
                     <View style={styles.productGlass} />
                     <Image

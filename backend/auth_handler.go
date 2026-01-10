@@ -22,6 +22,13 @@ type LoginReq struct {
 	Password string `json:"password"`
 }
 
+type GoogleLoginReq struct {
+	Email    string `json:"email"`
+	Name     string `json:"name"`
+	Avatar   string `json:"avatar"`
+	GoogleID string `json:"googleId"`
+}
+
 // HandleRegister handles user registration
 func HandleRegister(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -190,6 +197,89 @@ func HandleGetMe(w http.ResponseWriter, r *http.Request) {
 			"listingsCount": listingsCount,
 			"rentalsCount":  rentalsCount,
 			"totalListings": listingsCount, // Keep backward compatibility if needed
+			"totalBookings": rentalsCount,
+		},
+	})
+}
+
+// HandleGoogleLogin handles Google OAuth login/signup
+func HandleGoogleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		JSONError(w, http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	var req GoogleLoginReq
+	if err := DecodeJSON(r, &req); err != nil {
+		JSONError(w, http.StatusBadRequest, "Invalid request")
+		return
+	}
+
+	if req.Email == "" {
+		JSONError(w, http.StatusBadRequest, "Email is required")
+		return
+	}
+
+	collection := GetCollection("users")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	var user User
+	err := collection.FindOne(ctx, bson.M{"email": req.Email}).Decode(&user)
+
+	if err != nil {
+		// User doesn't exist, create new user
+		user = User{
+			ID:        primitive.NewObjectID(),
+			Email:     req.Email,
+			Password:  "", // No password for Google users
+			Name:      req.Name,
+			Avatar:    req.Avatar,
+			Rating:    0,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+
+		if _, err := collection.InsertOne(ctx, user); err != nil {
+			JSONError(w, http.StatusInternalServerError, "Failed to create user")
+			return
+		}
+	} else {
+		// User exists, optionally update avatar if it changed
+		if req.Avatar != "" && req.Avatar != user.Avatar {
+			collection.UpdateOne(ctx, bson.M{"_id": user.ID}, bson.M{
+				"$set": bson.M{
+					"avatar":    req.Avatar,
+					"updatedAt": time.Now(),
+				},
+			})
+			user.Avatar = req.Avatar
+		}
+	}
+
+	token, _ := GenerateToken(user.ID, user.Email)
+
+	// Calculate real counts
+	itemsCollection := GetCollection("items")
+	listingsCount, _ := itemsCollection.CountDocuments(ctx, bson.M{"ownerId": user.ID})
+
+	bookingsCollection := GetCollection("bookings")
+	rentalsCount, _ := bookingsCollection.CountDocuments(ctx, bson.M{"userId": user.ID})
+
+	JSON(w, http.StatusOK, map[string]interface{}{
+		"message": "Login successful",
+		"token":   token,
+		"user": map[string]interface{}{
+			"id":            user.ID,
+			"email":         user.Email,
+			"name":          user.Name,
+			"phone":         user.Phone,
+			"avatar":        user.Avatar,
+			"location":      user.Location,
+			"rating":        user.Rating,
+			"listingsCount": listingsCount,
+			"rentalsCount":  rentalsCount,
+			"totalListings": listingsCount,
 			"totalBookings": rentalsCount,
 		},
 	})

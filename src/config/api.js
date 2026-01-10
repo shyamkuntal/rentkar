@@ -13,7 +13,7 @@ const getApiBaseUrl = () => {
     }
   } else {
     // Production mode: use your production API URL
-    return 'https://your-production-api.com/api';
+    return 'https://rentkar-w7j0.onrender.com/api';
   }
 };
 
@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
   // Auth
   REGISTER: `${API_BASE_URL}/auth/register`,
   LOGIN: `${API_BASE_URL}/auth/login`,
+  GOOGLE_LOGIN: `${API_BASE_URL}/auth/google`,
   GET_ME: `${API_BASE_URL}/auth/me`,
 
   // Items
@@ -52,6 +53,7 @@ export const API_ENDPOINTS = {
   USER_BY_ID: (id) => `${API_BASE_URL}/users/${id}`,
   BLOCK_USER: (id) => `${API_BASE_URL}/users/${id}/block`,
   UPDATE_PROFILE: `${API_BASE_URL}/users/profile`,
+  FCM_TOKEN: `${API_BASE_URL}/users/fcm-token`,
 
   // Reports
   REPORTS: `${API_BASE_URL}/reports`,

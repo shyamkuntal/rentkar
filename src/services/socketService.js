@@ -10,7 +10,7 @@ const getWsUrl = () => {
       return 'ws://localhost:8080/ws';
     }
   } else {
-    return 'wss://your-production-api.com/ws'; // Use wss:// for production
+    return 'wss://rentkar-w7j0.onrender.com/ws'; // Use wss:// for production
   }
 };
 
@@ -20,10 +20,19 @@ class SocketService {
   ws = null;
   messageCallbacks = [];
   typingCallbacks = [];
+  notificationCallbacks = []; // For global notifications (badge updates)
+  bookingNotificationCallbacks = []; // For booking-specific notifications
   reconnectAttempts = 0;
   maxReconnectAttempts = 5;
+  isConnecting = false;
 
   connect = async () => {
+    // Prevent duplicate connections
+    if (this.isConnecting) {
+      console.log('WebSocket connection already in progress');
+      return Promise.resolve(this.ws);
+    }
+
     const token = await getToken();
 
     if (!token) {
@@ -37,6 +46,8 @@ class SocketService {
       return Promise.resolve(this.ws);
     }
 
+    this.isConnecting = true;
+
     // Add token as query parameter for authentication
     const wsUrl = `${WS_URL}?token=${token}`;
 
@@ -46,6 +57,7 @@ class SocketService {
       this.ws.onopen = () => {
         console.log('WebSocket connected');
         this.reconnectAttempts = 0;
+        this.isConnecting = false;
         resolve(this.ws);
       };
 
@@ -60,11 +72,13 @@ class SocketService {
 
       this.ws.onerror = (error) => {
         console.error('WebSocket error:', error);
+        this.isConnecting = false;
         reject(error);
       };
 
       this.ws.onclose = () => {
         console.log('WebSocket disconnected');
+        this.isConnecting = false;
         this.attemptReconnect();
       };
     });
@@ -89,6 +103,8 @@ class SocketService {
     }
     this.messageCallbacks = [];
     this.typingCallbacks = [];
+    this.notificationCallbacks = [];
+    this.bookingNotificationCallbacks = [];
   };
 
   send = (data) => {
@@ -102,10 +118,22 @@ class SocketService {
   handleMessage = (data) => {
     switch (data.type) {
       case 'new_message':
+        // Message in an active chat room
         this.messageCallbacks.forEach(callback => callback(data.message));
         break;
       case 'user_typing':
         this.typingCallbacks.forEach(callback => callback(data));
+        break;
+      case 'new_chat_notification':
+        // New chat notification (for badge updates)
+        console.log('Received chat notification:', data);
+        this.notificationCallbacks.forEach(callback => callback(data));
+        break;
+      case 'booking_notification':
+        // Booking notification (new request, status change)
+        console.log('Received booking notification:', data);
+        this.bookingNotificationCallbacks.forEach(callback => callback(data));
+        this.notificationCallbacks.forEach(callback => callback(data)); // Also trigger general notification
         break;
       default:
         console.log('Unknown message type:', data.type);
@@ -131,7 +159,7 @@ class SocketService {
     });
   };
 
-  // Listen for new messages
+  // Listen for new messages (in active chat room)
   onMessage = (callback) => {
     this.messageCallbacks.push(callback);
   };
@@ -155,8 +183,30 @@ class SocketService {
     });
   };
 
+  // Listen for global notifications (chat and booking)
+  onNotification = (callback) => {
+    this.notificationCallbacks.push(callback);
+    return () => {
+      this.notificationCallbacks = this.notificationCallbacks.filter(cb => cb !== callback);
+    };
+  };
+
+  // Listen for booking-specific notifications
+  onBookingNotification = (callback) => {
+    this.bookingNotificationCallbacks.push(callback);
+    return () => {
+      this.bookingNotificationCallbacks = this.bookingNotificationCallbacks.filter(cb => cb !== callback);
+    };
+  };
+
+  // Remove notification listener
+  offNotification = (callback) => {
+    this.notificationCallbacks = this.notificationCallbacks.filter(cb => cb !== callback);
+  };
+
   // Get WebSocket instance
   getSocket = () => this.ws;
 }
 
 export default new SocketService();
+

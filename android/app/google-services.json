@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1015817315201",
+    "project_id": "rentkar-fb",
+    "storage_bucket": "rentkar-fb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1015817315201:android:e6a3f45c9c9fa519c63e80",
+        "android_client_info": {
+          "package_name": "com.rentkar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyrCy7614W-_hFN1dV0JR2Q-pLwUq_BOc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

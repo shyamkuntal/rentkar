@@ -25,6 +25,7 @@ func SetupRouter() http.Handler {
 	// Auth routes
 	mux.HandleFunc("/api/auth/register", HandleRegister)
 	mux.HandleFunc("/api/auth/login", HandleLogin)
+	mux.HandleFunc("/api/auth/google", HandleGoogleLogin)
 	mux.HandleFunc("/api/auth/me", AuthMiddleware(HandleGetMe))
 
 	// User routes
@@ -44,6 +45,9 @@ func SetupRouter() http.Handler {
 
 	// Report routes
 	mux.HandleFunc("/api/reports", AuthMiddleware(HandleReport))
+
+	// FCM token registration
+	mux.HandleFunc("/api/users/fcm-token", AuthMiddleware(HandleFCMToken))
 
 	// Item routes
 	mux.HandleFunc("/api/items", HandleItems)

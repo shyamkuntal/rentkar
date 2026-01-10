@@ -7,11 +7,13 @@ import LinearGradient from 'react-native-linear-gradient';
 import { getChats } from '../../services/chatService';
 import socketService from '../../services/socketService';
 import { AuthContext } from '../../context/AuthContext';
+import { useNotifications } from '../../context/NotificationContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ChatListScreen = () => {
   const navigation = useNavigation();
   const { user } = useContext(AuthContext);
+  const { refreshCounts } = useNotifications();
   const insets = useSafeAreaInsets();
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,15 +34,17 @@ const ChatListScreen = () => {
   useFocusEffect(
     useCallback(() => {
       loadChats();
-      socketService.connect();
+      refreshCounts(); // Refresh badge counts when screen is focused
 
-      // Listen for new messages to update list order/content
-      socketService.onMessage(() => {
-        loadChats(); // Refresh list on new message
+      // Listen for chat notifications to refresh list
+      const unsubscribe = socketService.onNotification((data) => {
+        if (data.type === 'new_chat_notification') {
+          loadChats(); // Refresh list on new message
+        }
       });
 
       return () => {
-        socketService.disconnect();
+        unsubscribe();
       };
     }, [])
   );
